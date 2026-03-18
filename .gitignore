@@ -2,3 +2,26 @@ build.sh
 node_modules
 yarn-error.log
 electron-builder.env
+
+# Build outputs
+dist/
+dist-electron/
+Space-Saver-Builds/
+bin/jxl-mac-x64/
+bin/lib/
+bin/*.wasm
+bin/*.js
+
+# Test assets
+assets/test-*
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+scripts/**/*.js
+scripts/**/*.js.map
+scripts/**/*.d.ts
+
+# Vite / React
+.eslintcache
+*.tsbuildinfo
+.vite/

@@ -1,0 +1,655 @@
+{
+  "@electron/get@2.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/electron/get",
+    "publisher": "Samuel Attard",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@electron/get",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@electron/get/LICENSE"
+  },
+  "@electron/remote@2.1.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/electron/remote",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@electron/remote",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@electron/remote/LICENSE"
+  },
+  "@sindresorhus/is@4.6.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/is",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@sindresorhus/is",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@sindresorhus/is/license"
+  },
+  "@szmarczak/http-timer@4.0.6": {
+    "licenses": "MIT",
+    "repository": "https://github.com/szmarczak/http-timer",
+    "publisher": "Szymon Marczak",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@szmarczak/http-timer",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@szmarczak/http-timer/LICENSE"
+  },
+  "@types/cacheable-request@6.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/cacheable-request",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/cacheable-request/LICENSE"
+  },
+  "@types/http-cache-semantics@4.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/http-cache-semantics",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/http-cache-semantics/LICENSE"
+  },
+  "@types/keyv@3.1.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/keyv",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/keyv/LICENSE"
+  },
+  "@types/node@20.19.33": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/node",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/node/LICENSE"
+  },
+  "@types/node@24.12.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/electron/node_modules/@types/node",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/electron/node_modules/@types/node/LICENSE"
+  },
+  "@types/responselike@1.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/responselike",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/responselike/LICENSE"
+  },
+  "@types/yauzl@2.10.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/yauzl",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/@types/yauzl/LICENSE"
+  },
+  "boolean@3.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/thenativeweb/boolean",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/boolean",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/boolean/LICENSE.txt"
+  },
+  "buffer-crc32@0.2.13": {
+    "licenses": "MIT",
+    "repository": "https://github.com/brianloveswords/buffer-crc32",
+    "publisher": "Brian J. Brennan",
+    "email": "brianloveswords@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/buffer-crc32",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/buffer-crc32/LICENSE"
+  },
+  "cacheable-lookup@5.0.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/szmarczak/cacheable-lookup",
+    "publisher": "Szymon Marczak",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/cacheable-lookup",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/cacheable-lookup/LICENSE"
+  },
+  "cacheable-request@7.0.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/lukechilds/cacheable-request",
+    "publisher": "Luke Childs",
+    "email": "lukechilds123@gmail.com",
+    "url": "http://lukechilds.co.uk",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/cacheable-request",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/cacheable-request/LICENSE"
+  },
+  "clone-response@1.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/clone-response",
+    "publisher": "Luke Childs",
+    "email": "lukechilds123@gmail.com",
+    "url": "http://lukechilds.co.uk",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/clone-response",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/clone-response/LICENSE"
+  },
+  "debug@4.4.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/debug-js/debug",
+    "publisher": "Josh Junon",
+    "url": "https://github.com/qix-",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/debug",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/debug/LICENSE"
+  },
+  "decompress-response@6.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/decompress-response",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/decompress-response",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/decompress-response/license"
+  },
+  "defer-to-connect@2.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/szmarczak/defer-to-connect",
+    "publisher": "Szymon Marczak",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/defer-to-connect",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/defer-to-connect/LICENSE"
+  },
+  "define-data-property@1.1.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/define-data-property",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/define-data-property",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/define-data-property/LICENSE"
+  },
+  "define-properties@1.2.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/define-properties",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/define-properties",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/define-properties/LICENSE"
+  },
+  "detect-node@2.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/iliakan/detect-node",
+    "publisher": "Ilya Kantor",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/detect-node",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/detect-node/LICENSE"
+  },
+  "electron@41.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/electron/electron",
+    "publisher": "Electron Community",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/electron",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/electron/LICENSE"
+  },
+  "end-of-stream@1.4.5": {
+    "licenses": "MIT",
+    "repository": "https://github.com/mafintosh/end-of-stream",
+    "publisher": "Mathias Buus",
+    "email": "mathiasbuus@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/end-of-stream",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/end-of-stream/LICENSE"
+  },
+  "env-paths@2.2.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/env-paths",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/env-paths",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/env-paths/license"
+  },
+  "es-define-property@1.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/es-define-property",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/es-define-property",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/es-define-property/LICENSE"
+  },
+  "es-errors@1.3.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/es-errors",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/es-errors",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/es-errors/LICENSE"
+  },
+  "es6-error@4.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/bjyoungblood/es6-error",
+    "publisher": "Ben Youngblood",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/es6-error",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/es6-error/LICENSE.md"
+  },
+  "escape-string-regexp@4.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/escape-string-regexp",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/escape-string-regexp",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/escape-string-regexp/license"
+  },
+  "extract-zip@2.0.1": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/maxogden/extract-zip",
+    "publisher": "max ogden",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/extract-zip",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/extract-zip/LICENSE"
+  },
+  "fd-slicer@1.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/andrewrk/node-fd-slicer",
+    "publisher": "Andrew Kelley",
+    "email": "superjoe30@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/fd-slicer",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/fd-slicer/LICENSE"
+  },
+  "framer-motion@12.38.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/motiondivision/motion",
+    "publisher": "Matt Perry",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/framer-motion",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/framer-motion/LICENSE.md"
+  },
+  "fs-extra@8.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jprichardson/node-fs-extra",
+    "publisher": "JP Richardson",
+    "email": "jprichardson@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/fs-extra",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/fs-extra/LICENSE"
+  },
+  "get-stream@5.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/get-stream",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/get-stream",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/get-stream/license"
+  },
+  "global-agent@3.0.0": {
+    "licenses": "BSD-3-Clause",
+    "repository": "https://github.com/gajus/global-agent",
+    "publisher": "Gajus Kuizinas",
+    "email": "gajus@gajus.com",
+    "url": "http://gajus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/global-agent",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/global-agent/LICENSE"
+  },
+  "globalthis@1.0.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/System.global",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/globalthis",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/globalthis/LICENSE"
+  },
+  "gopd@1.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/gopd",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/gopd",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/gopd/LICENSE"
+  },
+  "got@11.8.6": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/got",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/got",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/got/license"
+  },
+  "graceful-fs@4.2.11": {
+    "licenses": "ISC",
+    "repository": "https://github.com/isaacs/node-graceful-fs",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/graceful-fs",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/graceful-fs/LICENSE"
+  },
+  "has-property-descriptors@1.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/inspect-js/has-property-descriptors",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/has-property-descriptors",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/has-property-descriptors/LICENSE"
+  },
+  "http-cache-semantics@4.2.0": {
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/kornelski/http-cache-semantics",
+    "publisher": "Kornel Lesiński",
+    "email": "npms2@geekhood.net",
+    "url": "https://kornel.ski/",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/http-cache-semantics",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/http-cache-semantics/LICENSE"
+  },
+  "http2-wrapper@1.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/szmarczak/http2-wrapper",
+    "publisher": "Szymon Marczak",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/http2-wrapper",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/http2-wrapper/LICENSE"
+  },
+  "image-size@2.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/image-size/image-size",
+    "publisher": "netroy",
+    "email": "aditya@netroy.in",
+    "url": "http://netroy.in/",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/image-size",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/image-size/LICENSE"
+  },
+  "js-tokens@4.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/lydell/js-tokens",
+    "publisher": "Simon Lydell",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/js-tokens",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/js-tokens/LICENSE"
+  },
+  "json-buffer@3.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/dominictarr/json-buffer",
+    "publisher": "Dominic Tarr",
+    "email": "dominic.tarr@gmail.com",
+    "url": "http://dominictarr.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/json-buffer",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/json-buffer/LICENSE"
+  },
+  "json-stringify-safe@5.0.1": {
+    "licenses": "ISC",
+    "repository": "https://github.com/isaacs/json-stringify-safe",
+    "publisher": "Isaac Z. Schlueter",
+    "email": "i@izs.me",
+    "url": "http://blog.izs.me",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/json-stringify-safe",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/json-stringify-safe/LICENSE"
+  },
+  "jsonfile@4.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jprichardson/node-jsonfile",
+    "publisher": "JP Richardson",
+    "email": "jprichardson@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/jsonfile",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/jsonfile/LICENSE"
+  },
+  "keyv@4.5.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jaredwray/keyv",
+    "publisher": "Jared Wray",
+    "email": "me@jaredwray.com",
+    "url": "http://jaredwray.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/keyv",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/keyv/README.md"
+  },
+  "loose-envify@1.4.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/zertosh/loose-envify",
+    "publisher": "Andres Suarez",
+    "email": "zertosh@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/loose-envify",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/loose-envify/LICENSE"
+  },
+  "lowercase-keys@2.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/lowercase-keys",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/lowercase-keys",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/lowercase-keys/license"
+  },
+  "lucide-react@0.577.0": {
+    "licenses": "ISC",
+    "repository": "https://github.com/lucide-icons/lucide",
+    "publisher": "Eric Fennis",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/lucide-react",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/lucide-react/LICENSE"
+  },
+  "matcher@3.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/matcher",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/matcher",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/matcher/license"
+  },
+  "mimic-response@1.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/mimic-response",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/mimic-response",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/mimic-response/license"
+  },
+  "mimic-response@3.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/mimic-response",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/decompress-response/node_modules/mimic-response",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/decompress-response/node_modules/mimic-response/license"
+  },
+  "motion-dom@12.38.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/motiondivision/motion",
+    "publisher": "Matt Perry",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/motion-dom",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/motion-dom/LICENSE.md"
+  },
+  "motion-utils@12.36.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/motiondivision/motion",
+    "publisher": "Matt Perry",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/motion-utils",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/motion-utils/LICENSE.md"
+  },
+  "ms@2.1.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/vercel/ms",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/ms",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/ms/license.md"
+  },
+  "normalize-url@6.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/normalize-url",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/normalize-url",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/normalize-url/license"
+  },
+  "object-keys@1.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/object-keys",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "url": "http://ljharb.codes",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/object-keys",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/object-keys/LICENSE"
+  },
+  "once@1.4.0": {
+    "licenses": "ISC",
+    "repository": "https://github.com/isaacs/once",
+    "publisher": "Isaac Z. Schlueter",
+    "email": "i@izs.me",
+    "url": "http://blog.izs.me/",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/once",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/once/LICENSE"
+  },
+  "p-cancelable@2.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/p-cancelable",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/p-cancelable",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/p-cancelable/license"
+  },
+  "pend@1.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/andrewrk/node-pend",
+    "publisher": "Andrew Kelley",
+    "email": "superjoe30@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/pend",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/pend/LICENSE"
+  },
+  "progress@2.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/visionmedia/node-progress",
+    "publisher": "TJ Holowaychuk",
+    "email": "tj@vision-media.ca",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/progress",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/progress/LICENSE"
+  },
+  "pump@3.0.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/mafintosh/pump",
+    "publisher": "Mathias Buus Madsen",
+    "email": "mathiasbuus@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/pump",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/pump/LICENSE"
+  },
+  "quick-lru@5.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/quick-lru",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/quick-lru",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/quick-lru/license"
+  },
+  "react-dom@18.3.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/facebook/react",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/react-dom",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/react-dom/LICENSE"
+  },
+  "react@18.3.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/facebook/react",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/react",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/react/LICENSE"
+  },
+  "resolve-alpn@1.2.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/szmarczak/resolve-alpn",
+    "publisher": "Szymon Marczak",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/resolve-alpn",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/resolve-alpn/LICENSE"
+  },
+  "responselike@2.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/responselike",
+    "publisher": "lukechilds",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/responselike",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/responselike/LICENSE"
+  },
+  "roarr@2.15.4": {
+    "licenses": "BSD-3-Clause",
+    "repository": "https://github.com/gajus/roarr",
+    "publisher": "Gajus Kuizinas",
+    "email": "gajus@gajus.com",
+    "url": "http://gajus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/roarr",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/roarr/LICENSE"
+  },
+  "scheduler@0.23.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/facebook/react",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/scheduler",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/scheduler/LICENSE"
+  },
+  "semver-compare@1.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/substack/semver-compare",
+    "publisher": "James Halliday",
+    "email": "mail@substack.net",
+    "url": "http://substack.net",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/semver-compare",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/semver-compare/LICENSE"
+  },
+  "semver@6.3.1": {
+    "licenses": "ISC",
+    "repository": "https://github.com/npm/node-semver",
+    "publisher": "GitHub Inc.",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/semver",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/semver/LICENSE"
+  },
+  "semver@7.7.4": {
+    "licenses": "ISC",
+    "repository": "https://github.com/npm/node-semver",
+    "publisher": "GitHub Inc.",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/global-agent/node_modules/semver",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/global-agent/node_modules/semver/LICENSE"
+  },
+  "serialize-error@7.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/serialize-error",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/serialize-error",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/serialize-error/license"
+  },
+  "space-saver@2.1.3": {
+    "licenses": "Custom: https://github.com/ecc521/Space-Saver.git",
+    "repository": "https://github.com/ecc521/Space-Saver",
+    "publisher": "Tucker Willenborg",
+    "email": "admin@rivers.run",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/README.md"
+  },
+  "sprintf-js@1.1.3": {
+    "licenses": "BSD-3-Clause",
+    "repository": "https://github.com/alexei/sprintf.js",
+    "publisher": "Alexandru Mărășteanu",
+    "email": "hello@alexei.ro",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/sprintf-js",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/sprintf-js/LICENSE"
+  },
+  "sumchecker@3.0.1": {
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/malept/sumchecker",
+    "publisher": "Mark Lee",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/sumchecker",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/sumchecker/LICENSE"
+  },
+  "tslib@2.8.1": {
+    "licenses": "0BSD",
+    "repository": "https://github.com/Microsoft/tslib",
+    "publisher": "Microsoft Corp.",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/tslib",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/tslib/LICENSE.txt"
+  },
+  "type-fest@0.13.1": {
+    "licenses": "(MIT OR CC0-1.0)",
+    "repository": "https://github.com/sindresorhus/type-fest",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/type-fest",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/type-fest/license"
+  },
+  "undici-types@6.21.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/nodejs/undici",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/undici-types",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/undici-types/LICENSE"
+  },
+  "undici-types@7.16.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/nodejs/undici",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/electron/node_modules/undici-types",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/electron/node_modules/undici-types/LICENSE"
+  },
+  "universalify@0.1.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/RyanZim/universalify",
+    "publisher": "Ryan Zimmerman",
+    "email": "opensrc@ryanzim.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/universalify",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/universalify/LICENSE"
+  },
+  "wrappy@1.0.2": {
+    "licenses": "ISC",
+    "repository": "https://github.com/npm/wrappy",
+    "publisher": "Isaac Z. Schlueter",
+    "email": "i@izs.me",
+    "url": "http://blog.izs.me/",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/wrappy",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/wrappy/LICENSE"
+  },
+  "yauzl@2.10.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/thejoshwolfe/yauzl",
+    "publisher": "Josh Wolfe",
+    "email": "thejoshwolfe@gmail.com",
+    "path": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/yauzl",
+    "licenseFile": "/Users/tuckerwillenborg/Documents/GitHub/Space-Saver-develop/node_modules/yauzl/LICENSE"
+  }
+}

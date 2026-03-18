@@ -1,29 +1,34 @@
 {
-    "name": "space-saver",
-    "version": "2.1.3",
-    "description": "Space Saver can save you lots of space by utilizing lossless file re-compression. No data is lost, and no formats are changed without your permission. It also includes a file viewer.",
-    "homepage": "https://github.com/ecc521/Space-Saver",
+    "name": "shrink-wizard",
+    "version": "3.0.0",
+    "homepage": "https://shrinkwizard.com",
     "repository": "https://github.com/ecc521/Space-Saver",
-    "main": "src/index.js",
+    "type": "module",
+    "main": "dist-electron/main/index.cjs",
     "author": {
         "name": "Tucker Willenborg",
         "email": "admin@rivers.run"
     },
     "scripts": {
-        "pack": "electron-builder --dir",
-        "dist": "electron-builder",
-        "start": "electron ."
+        "build:main": "node scripts/build-main.mjs",
+        "dev": "npm run build:main && concurrently \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+        "build": "tsc && vite build && tsc -p tsconfig.node.json && npm run build:main",
+        "pack": "npm run build && electron-builder --dir",
+        "dist": "npm run build && electron-builder",
+        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+        "preview": "vite preview",
+        "generate-licenses": "license-checker --production --json --out src/renderer/assets/npm-licenses.json"
     },
     "dmg": {
         "format": "UDBZ"
     },
     "build": {
         "copyright": "Copyright © 2019 Tucker Willenborg",
-        "productName": "Space Saver",
-        "appId": "com.electron.space-saver",
+        "productName": "Shrink Wizard",
+        "appId": "com.electron.shrink-wizard",
         "compression": "maximum",
         "directories": {
-            "output": "../Space-Saver"
+            "output": "../Space-Saver-Builds"
         },
         "publish": {
             "provider": "github",
@@ -99,7 +104,8 @@
         ],
         "mac": {
             "target": [
-                "dmg"
+                "dmg",
+                "zip"
             ],
             "extraResources": [
                 "bin/*darwin*"
@@ -131,10 +137,29 @@
         }
     },
     "devDependencies": {
-        "electron": "^31.0.0",
-        "electron-builder": "^24.13.3"
+        "@types/emscripten": "^1.41.5",
+        "@types/image-size": "^0.7.0",
+        "@types/node": "^20.11.24",
+        "@types/react": "^18.2.64",
+        "@types/react-dom": "^18.2.21",
+        "@vitejs/plugin-react": "^6.0.1",
+        "concurrently": "^8.2.2",
+        "cross-env": "^7.0.3",
+        "electron": "^41.0.2",
+        "electron-builder": "^26.8.1",
+        "esbuild": "^0.27.4",
+        "license-checker": "^25.0.1",
+        "typescript": "^5.2.2",
+        "vite": "^8.0.0",
+        "wait-on": "^7.2.0"
     },
     "dependencies": {
-        "@electron/remote": "^2.1.2"
+        "@electron/remote": "^2.1.2",
+        "electron-updater": "^6.8.3",
+        "framer-motion": "^12.38.0",
+        "image-size": "^2.0.2",
+        "lucide-react": "^0.577.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
     }
 }

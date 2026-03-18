@@ -1,22 +1,69 @@
-# Space-Saver-develop
+# Shrink Wizard
 
+Shrink Wizard is a modern, cross-platform desktop application designed to reclaim disk space through lossless file re-compression. It seamlessly integrates OS-level transparent compression capabilities and advanced media optimization techniques with a sleek, dynamic React interface.
 
+## Features
 
-Settings should add windows compact compactOS:always thingy.
-It is complex to add it elseware, and should be super simple to add.
+- **macOS Transparent Compression**: Utilizes native Apple File System Compression via `ditto` natively bundled in the OS to drastically reduce the footprint of standard applications and directories, without affecting runtime compatibility or signatures.
+- **Windows CompactOS Integration**: Exposes the underlying Windows `compact.exe` utility, allowing you to compress the entire operating system layer or specific directories using `LZX` or `XPRESS` algorithms.
+- **Lossless JPEG Optimization**: Strips bloated structural metadata and optimizes Huffman tables without altering a single pixel of visual data. It employs Mozilla's MozJPEG engine.
+- **Archival JPEG XL Recompression**: Losslessly transpiles JPEG bitstreams into the modern, highly-efficient `.jxl` format for an additional 25-30% spatial savings, fully reversible back to the exact original JPEG.
+- **Beautiful React Interface**: Built with Vite, React 18, and Framer Motion for a fluid, dark-mode-first user experience.
 
+## Installation & Development
 
+Shrink Wizard runs on Electron 29 and Node 20. Ensure you have Node.js and npm installed.
 
+```bash
+# Clone the repository
+git clone https://github.com/ecc521/Space-Saver.git
+cd Space-Saver
 
+# Install dependencies
+npm install
 
-#If you want to publish, use node build.js publish
-node build.js
-./build.sh
+# Start the development server (Vite HMR + Electron)
+npm run dev
 
-Platform Specific Builds:
-Windows: npx electron-builder --win
-Mac: yarn add fs-xattr && npx electron-builder --mac && yarn remove fs-xattr
-Linux arm64: npx electron-builder --linux --arm64
-Linux x64: npx electron-builder --linux --x64
+# Build for production
+npm run build
 
-Note: MacOS Catalina removed 32 bit support. This means that the Windows binary must, as of now, be built on Windows.
+# Package the distributables for your current platform
+npm run dist
+```
+
+## Binary Dependencies
+
+### Native Binaries
+For peak performance, Shrink Wizard bundles pre-compiled, native executables safely packaged in the `bin/` directory. 
+- **Image Transcoding:** `jpegtran-mac-arm64` / `jpegtran-win-amd64.exe` (MozJPEG)
+- **JPEG XL Engine:** `cjxl` & `djxl` reference implementations
+- **Apple FS Compression:** Native macOS `ditto` (`--hfsCompression`)
+
+*These binaries are sourced from official upstream releases, package managers, or trusted distributions.*
+
+### WebAssembly MozJPEG (Fallback)
+If a native binary is unavailable for the host platform, Shrink Wizard executes a pure-WebAssembly version of `jpegtran` powered by V8. The WASM artifact was manually compiled from the MozJPEG C source.
+
+**How to rebuild the WASM artifact (`jpegtran.js` / `jpegtran.wasm`):**
+We provide a Dockerfile inside `scripts/wasm-mozjpeg/` that sets up Emscripten and compiles the MozJPEG source code into WASM with Node file system access (`-s NODERAWFS=1`).
+
+```bash
+# Navigate to the docker context
+cd scripts/wasm-mozjpeg
+
+# Build the Docker image (this handles downloading and compiling MozJPEG)
+docker build -t build-wasm-mozjpeg .
+
+# Extract the compiled artifacts (.js and .wasm) to the host machine
+docker create --name extract-container build-wasm-mozjpeg
+docker cp extract-container:/usr/src/app/out/jpegtran.js ../../bin/jpegtran.js
+docker cp extract-container:/usr/src/app/out/jpegtran.wasm ../../bin/jpegtran.wasm
+docker rm extract-container
+```
+
+## Metadata Preservation
+By default, the application runs `jpegtran` with the `-copy all` flag during lossless compression to strictly preserve all file metadata (ICC profiles, EXIF, XMP, etc.).
+
+## License
+Copyright © Tucker Willenborg
