@@ -1,0 +1,4 @@
+[submodule "website"]
+	path = website
+	url = https://github.com/ecc521/shrinkwizard.com.git
+	branch = main
