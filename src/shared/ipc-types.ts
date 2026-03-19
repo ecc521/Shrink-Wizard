@@ -24,6 +24,10 @@ export interface ProgressData {
   failedCount: number;
   alreadyCompressedCount: number;
   totalFiles: number;
+  originalMB?: number;
+  currentSettingsSavingsMB?: number;
+  maxSettingsSavingsMB?: number;
+  fileCount?: number;
 }
 
 /**
@@ -48,18 +52,36 @@ export interface ElectronAPI {
   
   // Unified recursive processing
   processPaths: (filePaths: string[], mode: 'compress' | 'restore', options: any) => Promise<CompressionStats>;
+  getPathForFile: (file: File) => string;
   
   // Windows exclusively
   queryCompactOS: () => Promise<boolean>;
   toggleCompactOS: (enable: boolean) => Promise<void>;
   
-  // App Info
+  // App Info & Licensing
   getAppVersion: () => Promise<string>;
   openLicenses: () => Promise<void>;
   openUrl: (url: string) => Promise<void>;
   
+  getProStatus: () => Promise<boolean>;
+  verifyLicense: (key: string) => Promise<boolean>;
+  isAdmin: () => Promise<boolean>;
+  getGlobalSavingsMB: () => Promise<number>;
+  
+  // Scanner API
+  scanSystem: (paths: string[], options: any) => Promise<{results: any[], skippedCount: number}>;
+  onScanUpdate: (callback: (data: {results: any[], skippedCount: number}) => void) => void;
+  removeScanUpdateListeners: () => void;
+  onScanProgress: (callback: (data: any) => void) => void;
+  removeScanProgressListeners: () => void;
+  abortScan: () => Promise<void>;
+  abortProcess: () => Promise<void>;
+  
   // Progress Events
   onProgress: (callback: (data: ProgressData) => void) => void;
   removeProgressListeners: () => void;
+  
+  onLimitReached: (callback: () => void) => void;
+  removeLimitReachedListeners: () => void;
   togglePause: (paused: boolean) => Promise<void>;
 }

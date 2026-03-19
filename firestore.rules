@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // The collection where we will store Pro License Keys
+    match /licenses/{licenseKey} {
+    
+      // ALLOW: Any user can read the status of a specific license IF they know the exact Key ID.
+      allow get: if true; 
+      
+      // DENY: Nobody is allowed to query the entire list of keys to scrape them.
+      allow list: if false; 
+      
+      // DENY: Nobody from the frontend can generate, modify, or delete a license.
+      // (Only your Stripe Webhook using the Firebase Admin SDK can bypass this and write/update them)
+      allow write: if false; 
+      
+    }
+  }
+}

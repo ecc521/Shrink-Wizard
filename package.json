@@ -34,7 +34,7 @@
             "provider": "github",
             "releaseType": "prerelease",
             "owner": "ecc521",
-            "repo": "Space-Saver"
+            "repo": "shrinkwizard.com"
         },
         "fileAssociations": [
             {
@@ -156,6 +156,7 @@
     "dependencies": {
         "@electron/remote": "^2.1.2",
         "electron-updater": "^6.8.3",
+        "firebase": "^12.10.0",
         "framer-motion": "^12.38.0",
         "image-size": "^2.0.2",
         "lucide-react": "^0.577.0",

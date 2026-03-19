@@ -132,6 +132,16 @@ export async function transparentlyCompress(
   const originalDiskUsage = stat.blocks * 512;
   const logicalSize = stat.size;
 
+  // Protect compressor from boundless execution on raw Virtual Machine slices / sparse maps
+  if (originalDiskUsage < logicalSize) {
+    return {
+      originalSize: logicalSize,
+      compressedSize: originalDiskUsage,
+      mark: false,
+      compressed: false,
+    };
+  }
+
   return new Promise((resolve, reject) => {
     const tmpPath = `${src}.wzd_tmp_${Math.random().toString(36).substr(2, 9)}`;
     const args = ['--hfsCompression', src, tmpPath];
@@ -158,11 +168,12 @@ export async function transparentlyCompress(
         // Atomic swap
         await fs.promises.rename(tmpPath, src);
         
-        const compressedSize = await getDiskUsage(src);
+        
+        const endDiskUsage = await getDiskUsage(src);
         resolve({
-          originalSize: logicalSize,
-          compressedSize,
-          mark: true,
+          originalSize: originalDiskUsage, // Return absolute physical bytes as the benchmark baseline
+          compressedSize: endDiskUsage,
+          mark: endDiskUsage < originalDiskUsage, 
           compressed: true,
         });
       } catch (err) {

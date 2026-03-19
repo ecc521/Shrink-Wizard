@@ -32,6 +32,30 @@ npm run build
 npm run dist
 ```
 
+## Environment Configuration
+
+To develop locally with premium features (Pro Tier unlocking) and data persistence, you must configure the database and Stripe integrations. Create a `.env` file in the root directory and populate it with the following API variables:
+
+### Database (Firebase)
+Used for user authentication, tracking the 5GB limits, and managing "Pro" licenses securely via Firestore.
+- `VITE_FIREBASE_API_KEY`: Your Firebase web API key.
+- `VITE_FIREBASE_AUTH_DOMAIN`: Example: `your-project.firebaseapp.com`.
+- `VITE_FIREBASE_PROJECT_ID`: Your Firebase project ID.
+- `VITE_FIREBASE_STORAGE_BUCKET`: Example: `your-project.appspot.com`.
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`: Your messaging sender ID.
+- `VITE_FIREBASE_APP_ID`: Your Firebase web app ID.
+
+**Deploying Database Rules:**
+Shrink Wizard includes strict Security Rules (`firestore.rules`) out-of-the-box to prevent users from scraping or modifying License Keys. Once you install the Firebase CLI (`npm install -g firebase-tools`) and login (`firebase login`), deploy these rules to your project by running:
+```bash
+firebase deploy --only firestore:rules
+```
+
+### Stripe Integration
+Used for secure checkout and payment processing.
+- `VITE_STRIPE_PUBLIC_KEY`: Your Stripe publishable/public key (starts with `pk_test_` or `pk_live_`).
+- `STRIPE_SECRET_KEY`: Your Stripe secret key. *Warning: Never bundle this into the Electron client directly, keep it in a secure backend or serverless function.*
+
 ## Binary Dependencies
 
 ### Native Binaries

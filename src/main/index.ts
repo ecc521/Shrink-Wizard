@@ -1,5 +1,10 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, screen } from 'electron';
 import * as path from 'path';
+
+let isQueuePaused = false;
+let currentScanToken = 0;
+let currentProcessToken = 0;
+const globalScannedInodes = new Set<string>();
 import * as os from 'os';
 import { transparentlyCompress as macosCompress, undoTransparentCompression as macosUndo, isTransparentlyCompressed as macosIsCompressed } from './compression/macos';
 import { transparentlyCompress as winCompress, undoTransparentCompression as winUndo, isTransparentlyCompressed as winIsCompressed, queryCompactOS, toggleCompactOS } from './compression/windows';
@@ -7,19 +12,49 @@ import { compressJpegNative } from './compression/jpeg';
 import { compressJpegToJxlNative, restoreJxlToJpegNative } from './compression/jxl';
 import { CompressionStats } from '../shared/ipc-types';
 import * as fs from 'fs';
+import * as zlib from 'zlib';
+import { execSync } from 'child_process';
 import { autoUpdater } from 'electron-updater';
 
-let mainWindow: BrowserWindow | null = null;
-let isQueuePaused = false;
+// Persistent Global Stats for Free Tier Metering & Pro Status
+let globalStats = { globalSavingsMB: 0, isPro: false, hasSeen5GBLimit: false };
+const statsPath = path.join(app.getPath('userData'), 'shrinkwizard_stats.json');
+
+function loadStats() {
+  try {
+    if (fs.existsSync(statsPath)) {
+      const data = fs.readFileSync(statsPath, 'utf8');
+      globalStats = { ...globalStats, ...JSON.parse(data) };
+    }
+  } catch (err) {
+    console.error("Failed to load stats", err);
+  }
+}
+
+function saveStats(addMB: number) {
+  globalStats.globalSavingsMB += addMB;
+  try {
+    fs.writeFileSync(statsPath, JSON.stringify(globalStats));
+  } catch (err) {
+    console.error("Failed to save stats", err);
+  }
+}
 
 // Basic auto-updater config
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
+let mainWindow: BrowserWindow | null = null;
+
 function createWindow() {
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const boundedWidth = Math.min(1080, screenWidth - 40);
+  const boundedHeight = Math.min(770, screenHeight - 40);
+
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 700,
+    width: boundedWidth,
+    height: boundedHeight,
+    titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.cjs'),
       nodeIntegration: false,
@@ -34,12 +69,20 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
   }
 
+  // IMPENETRABLE LOCK: Prevent Chromium from natively loading dropped files and causing a White Screen
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    if (url !== 'http://localhost:5173/') {
+      e.preventDefault();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
 app.whenReady().then(() => {
+  loadStats();
   createWindow();
   
   // Check for updates quietly in the background
@@ -121,6 +164,8 @@ app.whenReady().then(() => {
 
   // Unified process interface handling recursion, images, and OS-level operations
   ipcMain.handle('process-paths', async (event, filePaths: string[], mode: 'compress' | 'restore', options: any): Promise<CompressionStats> => {
+    currentProcessToken++;
+    const myToken = currentProcessToken;
     // Disable ASAR traversal to prevent Electron from treating .asar files as directories, which breaks OS-level stat calls
     process.noAsar = true;
 
@@ -128,6 +173,7 @@ app.whenReady().then(() => {
     
     const allFiles: { path: string, size: number, ext: string }[] = [];
     async function walk(targetPath: string) {
+      if (myToken !== currentProcessToken) return;
       try {
         const stat = await fs.promises.stat(targetPath);
         if (stat.isDirectory()) {
@@ -144,6 +190,7 @@ app.whenReady().then(() => {
     }
 
     for (const p of filePaths) {
+      if (myToken !== currentProcessToken) break;
       await walk(p);
     }
 
@@ -160,6 +207,8 @@ app.whenReady().then(() => {
     
     let originalSizeTracker = 0;
     let compressedSizeTracker = 0;
+    
+    let sudoFailed = false;
 
     const updateProgress = () => {
       event.sender.send('progress-update', {
@@ -172,20 +221,100 @@ app.whenReady().then(() => {
         skippedCount,
         failedCount,
         alreadyCompressedCount,
-        totalFiles
+        totalFiles,
+        globalSavingsMB: globalStats.globalSavingsMB,
+        sudoFailed
       });
     };
 
     updateProgress();
 
+    let rootSocket: any = null;
+    let rootServer: any = null;
+    const workerPromises = new Map<string, { resolve: (val: any) => void; reject: (err: any) => void }>();
+    
+    if (process.platform === 'darwin' && filePaths.some((p: string) => p === '/' || p.startsWith('/Applications') || p.startsWith('/Library') || p.startsWith('/System'))) {
+      const net = require('net');
+      const { exec } = require('child_process');
+      const socketPath = path.join(os.tmpdir(), `sw-ipc-${Date.now()}-${Math.random().toString(36).substring(2)}.sock`);
+      
+      try {
+        await new Promise<void>((resolve, reject) => {
+          rootServer = net.createServer((socket: any) => {
+            rootSocket = socket;
+            let buffer = '';
+            socket.on('data', (data: Buffer) => {
+              buffer += data.toString();
+              let newlineIdx;
+              while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+                const msgStr = buffer.slice(0, newlineIdx);
+                buffer = buffer.slice(newlineIdx + 1);
+                if (!msgStr.trim()) continue;
+                try {
+                  const msg = JSON.parse(msgStr);
+                  if (msg.type === 'ready') resolve();
+                  else if (msg.type === 'result' || msg.type === 'error') {
+                    const p = workerPromises.get(msg.id);
+                    if (p) {
+                      if (msg.type === 'result') p.resolve(msg.result);
+                      else p.reject(new Error(msg.error));
+                      workerPromises.delete(msg.id);
+                    }
+                  }
+                } catch (e) {}
+              }
+            });
+          });
+
+          rootServer.listen(socketPath, () => {
+            const isPackaged = app.isPackaged;
+            const workerPath = isPackaged 
+              ? path.join(process.resourcesPath, 'app.asar/dist-electron/main/compression/sudo-worker.cjs')
+              : path.join(__dirname, 'compression', 'sudo-worker.cjs');
+              
+            const cmd = `osascript -e 'do shell script "ELECTRON_RUN_AS_NODE=1 \\"${process.execPath}\\" \\"${workerPath}\\" \\"${socketPath}\\"" with administrator privileges'`;
+            exec(cmd, (err: any) => {
+              if (err) {
+                rootServer?.close();
+                sudoFailed = true;
+                updateProgress();
+                resolve(); // Don't crash, just proceed without elevation if they cancel
+              }
+            });
+          });
+        });
+      } catch (e) {
+        console.error("Failed to launch root worker:", e);
+      }
+    }
+
     // 2. Processing Phase (Concurrency Pool)
-    async function processConcurrency(files: typeof allFiles, concurrency: number, worker: (file: typeof allFiles[0]) => Promise<void>) {
+    async function processConcurrency(files: typeof allFiles, initialConcurrency: number, worker: (file: typeof allFiles[0]) => Promise<void>) {
       let index = 0;
+      let activeWorkers = 0;
+
       async function next() {
+        activeWorkers++;
         while (index < files.length) {
-          while (isQueuePaused) {
+          if (myToken !== currentProcessToken) break;
+          // Dynamically kill extra worker threads mid-job if the user crosses the 5GB limit
+          if (!options.isPro && globalStats.globalSavingsMB >= 5000) {
+            if (!globalStats.hasSeen5GBLimit) {
+              globalStats.hasSeen5GBLimit = true;
+              try { fs.writeFileSync(statsPath, JSON.stringify(globalStats)); } catch (e) {}
+              isQueuePaused = true;
+              event.sender.send('limit-reached');
+            }
+            if (activeWorkers > 1) {
+              activeWorkers--;
+              return; 
+            }
+          }
+
+          while (isQueuePaused && myToken === currentProcessToken) {
             await new Promise(r => setTimeout(r, 500));
           }
+          if (myToken !== currentProcessToken) break;
           const file = files[index++];
           await worker(file).catch(err => {
             failedCount++;
@@ -194,14 +323,19 @@ app.whenReady().then(() => {
           processedMB += file.size / (1024 * 1024);
           updateProgress();
         }
+        activeWorkers--;
       }
+      
       const promises = [];
-      for (let i = 0; i < concurrency; i++) promises.push(next());
+      for (let i = 0; i < initialConcurrency; i++) promises.push(next());
       await Promise.all(promises);
     }
     
-    // Bind concurrency physically to 1 thread per logical core to prevent IO/CPU saturation
-    const hardwareConcurrency = os.cpus().length > 0 ? os.cpus().length : 4;
+    // Start with max concurrency (or 1 if they are already throttled before the batch even starts)
+    let hardwareConcurrency = os.cpus().length > 0 ? os.cpus().length : 4;
+    if (!options.isPro && globalStats.globalSavingsMB >= 5000) {
+      hardwareConcurrency = 1; 
+    }
 
     await processConcurrency(allFiles, hardwareConcurrency, async (f) => {
       // Logic for Images
@@ -216,7 +350,9 @@ app.whenReady().then(() => {
         if (res && res.mark) {
           originalSizeTracker += res.originalSize;
           compressedSizeTracker += res.compressedSize;
-          savingsMB += (res.originalSize - res.compressedSize) / (1024 * 1024);
+          const savedFileMB = (res.originalSize - res.compressedSize) / (1024 * 1024);
+          savingsMB += savedFileMB;
+          saveStats(savedFileMB);
           compressedCount++;
         } else {
           skippedCount++;
@@ -246,7 +382,17 @@ app.whenReady().then(() => {
         const osOptions = { algorithm: algo };
         
         if (process.platform === 'darwin') {
-          osStats = await macosCompress(f.path, osOptions);
+          if (rootSocket) {
+            const id = Math.random().toString(36).substring(2);
+            const p = new Promise<any>((resolve, reject) => workerPromises.set(id, {resolve, reject}));
+            rootSocket.write(JSON.stringify({ type: 'process', id, file: {path: f.path}, mode: 'compress', options: osOptions }) + '\n');
+            const res = await p;
+            if (res.action === 'skipped') osStats = { mark: true, compressed: false, originalSize: 1, compressedSize: 2 };
+            else if (res.action === 'alreadyCompressed') osStats = { mark: false, compressed: false, originalSize: 0, compressedSize: 0 };
+            else osStats = { mark: true, compressed: true, originalSize: res.originalSize, compressedSize: res.compressedSize };
+          } else {
+            osStats = await macosCompress(f.path, osOptions);
+          }
         } else if (process.platform === 'win32') {
           osStats = await winCompress(f.path, osOptions);
         }
@@ -257,7 +403,9 @@ app.whenReady().then(() => {
             if (osStats.compressedSize < osStats.originalSize) {
                 originalSizeTracker += osStats.originalSize;
                 compressedSizeTracker += osStats.compressedSize;
-                savingsMB += (osStats.originalSize - osStats.compressedSize) / (1024 * 1024);
+                const savedFileMB = (osStats.originalSize - osStats.compressedSize) / (1024 * 1024);
+                savingsMB += savedFileMB;
+                saveStats(savedFileMB);
                 compressedCount++;
             } else {
                 skippedCount++; // It just didn't shrink
@@ -271,7 +419,14 @@ app.whenReady().then(() => {
         // Restore OS Compression
         let stats;
         if (process.platform === 'darwin') {
-          stats = await macosUndo(f.path);
+          if (rootSocket) {
+            const id = Math.random().toString(36).substring(2);
+            const p = new Promise<any>((resolve, reject) => workerPromises.set(id, {resolve, reject}));
+            rootSocket.write(JSON.stringify({ type: 'process', id, file: {path: f.path}, mode: 'restore' }) + '\n');
+            stats = await p;
+          } else {
+            stats = await macosUndo(f.path);
+          }
         } else if (process.platform === 'win32') {
           stats = await winUndo(f.path);
         }
@@ -286,10 +441,15 @@ app.whenReady().then(() => {
       }
     });
 
+    if (rootSocket) {
+      rootSocket.write(JSON.stringify({ type: 'exit' }) + '\n');
+      rootServer?.close();
+    }
+
     event.sender.send('progress-update', { 
         phase: 'done',
         totalMB, processedMB, savingsMB, percentage: 100,
-        compressedCount, skippedCount, failedCount, alreadyCompressedCount, totalFiles
+        compressedCount, skippedCount, failedCount, alreadyCompressedCount, totalFiles, sudoFailed
     });
 
     return {
@@ -314,10 +474,241 @@ app.whenReady().then(() => {
   ipcMain.handle('toggle-pause', (_, paused: boolean) => {
     isQueuePaused = paused;
   });
+
+  ipcMain.handle('abort-scan', () => {
+    currentScanToken++;
+  });
+
+  ipcMain.handle('abort-process', () => {
+    currentProcessToken++;
+  });
+
+  // Licensing Handlers
+  ipcMain.handle('get-pro-status', () => {
+    return globalStats.isPro;
+  });
+  
+  ipcMain.handle('get-global-savings', () => {
+    return globalStats.globalSavingsMB;
+  });
+  
+  ipcMain.handle('verify-license', async (_, licenseKey: string) => {
+    // TODO: Make HTTPS request to Firebase Cloud Function:
+    // const res = await fetch(`https://YOUR_PROJECT.cloudfunctions.net/verifyLicense?key=${licenseKey}`);
+    // const { signature, valid } = await res.json();
+    // Verify `signature` locally using the embedded Ed25519 public key in src/shared/license-pubkey.json
+    // crypto.verify(null, Buffer.from(licenseKey), publicKey, Buffer.from(signature, 'hex'))
+
+    // Validating mock logic for now
+    if (licenseKey.startsWith("SW-") || licenseKey === "PRO_TEST") {
+       globalStats.isPro = true;
+       fs.writeFileSync(statsPath, JSON.stringify(globalStats));
+       return true;
+    }
+    return false;
+  });
+
+  // Smart Scanner APIs
+  ipcMain.handle('is-admin', () => {
+    try {
+      if (process.platform === 'win32') {
+        execSync('net session', { stdio: 'ignore' });
+        return true;
+      } else {
+        return process.getuid ? process.getuid() === 0 : false;
+      }
+    } catch (e) {
+      return false;
+    }
+  });
+
+  ipcMain.handle('scan-system', async (event, paths: string[], options: any) => {
+    if (options?.clearCache) {
+      globalScannedInodes.clear();
+      return { results: [], skippedCount: 0 };
+    }
+    
+    let skippedCount = 0;
+    const deflateAsync = require('util').promisify(zlib.deflate);
+    
+    async function isProgressiveJpeg(targetPath: string): Promise<boolean> {
+      let fd;
+      try {
+        fd = await fs.promises.open(targetPath, 'r');
+        const buf = Buffer.alloc(32768);
+        const { bytesRead } = await fd.read(buf, 0, 32768, 0);
+        let i = 0;
+        while (i < bytesRead - 1) {
+          if (buf[i] === 0xFF) {
+            const marker = buf[i+1];
+            if (marker === 0xC2) return true;
+            if (marker === 0xC0 || marker === 0xDA) return false;
+          }
+          i++;
+        }
+      } catch (e) {} finally {
+        if (fd) await fd.close().catch(()=>{});
+      }
+      return false;
+    }
+
+    class Semaphore {
+      private queue: (() => void)[] = [];
+      constructor(private max: number) {}
+      async acquire() {
+        if (this.max > 0) { this.max--; return; }
+        await new Promise<void>(resolve => this.queue.push(resolve));
+      }
+      release() {
+        if (this.queue.length > 0) { const resolve = this.queue.shift()!; resolve(); }
+        else { this.max++; }
+      }
+    }
+    const ioLimit = new Semaphore(os.cpus().length * 4); // Capped IO concurrency
+    const statLimit = new Semaphore(64); // Reduced strict stat batching to prevent V8 LibUV threadpool queue starvation
+
+    currentScanToken++;
+    const myToken = currentScanToken;
+    const results: any[] = [];
+    
+    for (let rootPath of paths) {
+      if (rootPath.startsWith('~/')) {
+        rootPath = path.join(os.homedir(), rootPath.slice(2));
+      }
+      
+      let runOrigSize = 0; let runCurrentSavings = 0; let runMaxSavings = 0; let fileCount = 0;
+      let lastEmit = Date.now();
+
+      const walkQueue: { dir: string; depth: number }[] = [{ dir: rootPath, depth: 0 }];
+      const maxWorkers = os.cpus().length > 0 ? os.cpus().length : 8; // One recursive native traversal thread per CPU core
+      let activeWorkers = 0;
+
+      await new Promise<void>((resolve) => {
+        function spawnWorker() {
+          if (activeWorkers >= maxWorkers || walkQueue.length === 0) return;
+          activeWorkers++;
+
+          (async () => {
+            while (walkQueue.length > 0) {
+              if (myToken !== currentScanToken) {
+                walkQueue.length = 0;
+                break;
+              }
+              const task = walkQueue.pop(); // LIFO array traversal acts like Depth-First to constrain queue size bounds
+              if (!task) break;
+              if (task.depth > 12) continue;
+
+              let entries: any[] = [];
+              try {
+                await statLimit.acquire();
+                entries = await fs.promises.readdir(task.dir, { withFileTypes: true });
+              } catch (e) {
+                skippedCount++;
+              } finally {
+                statLimit.release();
+              }
+
+              for (const entry of entries) {
+                if (myToken !== currentScanToken) break;
+                while (isQueuePaused && myToken === currentScanToken) {
+                  await new Promise(r => setTimeout(r, 500));
+                }
+                if (myToken !== currentScanToken) break;
+                
+                const fullPath = path.join(task.dir, entry.name);
+                if (entry.isDirectory()) {
+                  walkQueue.push({ dir: fullPath, depth: task.depth + 1 });
+                  spawnWorker(); // Wake up idle workers for new directories
+                } else if (entry.isFile()) {
+                  let stat;
+                  try {
+                    await statLimit.acquire();
+                    stat = await fs.promises.stat(fullPath);
+                  } catch (e) {
+                    skippedCount++;
+                    continue;
+                  } finally {
+                    statLimit.release();
+                  }
+
+                  if (stat.size > 0 && stat.nlink === 1) {
+                    const inodeKey = `${stat.dev}-${stat.ino}`;
+                    if (globalScannedInodes.has(inodeKey)) continue;
+                    globalScannedInodes.add(inodeKey);
+
+                    const physicalSize = stat.blocks !== undefined ? Math.min(stat.size, stat.blocks * 512) : stat.size;
+                    if (physicalSize === 0) continue;
+
+                    fileCount++; runOrigSize += physicalSize;
+                    const ext = path.extname(fullPath).toLowerCase();
+                    if (options.imageCompressionEnabled && (ext === '.jpg' || ext === '.jpeg')) {
+                      await ioLimit.acquire();
+                      const isProg = await isProgressiveJpeg(fullPath);
+                      ioLimit.release();
+
+                      const mozSavings = isProg ? 0 : physicalSize * 0.20;
+                      const jxlSavings = isProg ? physicalSize * 0.10 : physicalSize * 0.30;
+                      runCurrentSavings += options.outputFormat === 'jxl' ? jxlSavings : mozSavings;
+                      runMaxSavings += jxlSavings;
+                    } else {
+                      let ratio = 0.35;
+                      if (physicalSize > 10 * 1024 * 1024) { 
+                        await ioLimit.acquire();
+                        let fd;
+                        try {
+                          fd = await fs.promises.open(fullPath, 'r');
+                          const sampleBuf = Buffer.alloc(1024 * 100);
+                          const { bytesRead } = await fd.read(sampleBuf, 0, 1024 * 100, 0);
+                          if (bytesRead > 0) {
+                            const def = await deflateAsync(sampleBuf.subarray(0, bytesRead), { level: 1 });
+                            let r = (bytesRead - def.length) / bytesRead;
+                            ratio = Math.max(0, Math.min(r, 0.60));
+                          }
+                        } catch (e) {} finally {
+                          if (fd) await fd.close().catch(()=>{});
+                          ioLimit.release();
+                        }
+                      }
+                      const nativeSavings = physicalSize * ratio;
+                      runCurrentSavings += options.nativeAlgo !== 'none' ? nativeSavings : 0;
+                      runMaxSavings += nativeSavings;
+                    }
+
+                    // Live Throttled UI Updates
+                    const now = Date.now();
+                    if (now - lastEmit > 16) {
+                      lastEmit = now;
+                      event.sender.send('scan-progress', {
+                        path: fullPath,
+                        originalMB: runOrigSize / 1048576,
+                        currentSettingsSavingsMB: runCurrentSavings / 1048576,
+                        maxSettingsSavingsMB: runMaxSavings / 1048576,
+                        fileCount
+                      });
+                    }
+                  }
+                }
+              }
+            }
+            activeWorkers--;
+            if (activeWorkers === 0 && walkQueue.length === 0) {
+              resolve();
+            }
+          })();
+          spawnWorker();
+        }
+        spawnWorker();
+      });
+
+      if (runOrigSize > 0) {
+        results.push({ path: rootPath, originalMB: runOrigSize / 1048576, currentSettingsSavingsMB: runCurrentSavings / 1048576, maxSettingsSavingsMB: runMaxSavings / 1048576, fileCount });
+        event.sender.send('scan-update', { results, skippedCount });
+      }
+    }
+    return { results, skippedCount };
+  });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  app.quit();
 });

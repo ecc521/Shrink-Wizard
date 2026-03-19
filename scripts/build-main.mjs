@@ -1,7 +1,7 @@
 import { build } from 'esbuild';
 
 build({
-  entryPoints: ['src/main/index.ts', 'src/preload/index.ts'],
+  entryPoints: ['src/main/index.ts', 'src/preload/index.ts', 'src/main/compression/sudo-worker.ts'],
   bundle: true,
   platform: 'node',
   format: 'cjs',
