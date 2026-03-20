@@ -170,7 +170,75 @@ app.whenReady().then(() => {
     process.noAsar = true;
 
     event.sender.send('progress-update', { phase: 'scanning', totalMB: 0, processedMB: 0, savingsMB: 0, percentage: 0, compressedCount: 0, skippedCount: 0, skippedMB: 0, failedCount: 0, alreadyCompressedCount: 0, totalFiles: 0 });
-    
+    let rootSocket: any = null;
+    let rootServer: any = null;
+    let sudoFailed = false;
+    let outOfSpace = false;
+    let lastSpaceCheck = 0;
+    const workerPromises = new Map<string, { resolve: (val: any) => void; reject: (err: any) => void }>();
+
+    if (process.platform === 'darwin' && filePaths.some((p: string) => p === '/' || p.startsWith('/Applications') || p.startsWith('/Library') || p.startsWith('/System'))) {
+      const net = require('net');
+      const { execFile } = require('child_process');
+      const socketPath = path.join(os.tmpdir(), `sw-ipc-${Date.now()}-${Math.random().toString(36).substring(2)}.sock`);
+      
+      try {
+        await new Promise<void>((resolve, reject) => {
+          rootServer = net.createServer((socket: any) => {
+            rootSocket = socket;
+            let buffer = '';
+            socket.on('data', (data: Buffer) => {
+              buffer += data.toString();
+              let newlineIdx;
+              while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+                const msgStr = buffer.slice(0, newlineIdx);
+                buffer = buffer.slice(newlineIdx + 1);
+                if (!msgStr.trim()) continue;
+                try {
+                  const msg = JSON.parse(msgStr);
+                  if (msg.type === 'ready') resolve();
+                  else if (msg.type === 'result' || msg.type === 'error') {
+                    const p = workerPromises.get(msg.id);
+                    if (p) {
+                      if (msg.type === 'result') p.resolve(msg.result);
+                      else p.reject(new Error(msg.error));
+                      workerPromises.delete(msg.id);
+                    }
+                  }
+                } catch (e) {}
+              }
+            });
+          });
+
+          rootServer.listen(socketPath, () => {
+            const isPackaged = app.isPackaged;
+            const workerPath = isPackaged 
+              ? path.join(process.resourcesPath, 'app.asar/dist-electron/main/compression/sudo-worker.cjs')
+              : path.join(__dirname, 'compression', 'sudo-worker.cjs');
+              
+            const args = [
+              '-e', 'on run argv',
+              '-e', 'do shell script "ELECTRON_RUN_AS_NODE=1 " & quoted form of item 1 of argv & " " & quoted form of item 2 of argv & " " & quoted form of item 3 of argv & " with prompt \\"Shrink Wizard needs admin permissions to process system directories.\\" with administrator privileges"',
+              '-e', 'end run',
+              process.execPath,
+              workerPath,
+              socketPath
+            ];
+            execFile('/usr/bin/osascript', args, { env: { PATH: '/usr/bin:/bin:/usr/sbin:/sbin' } }, (err: any) => {
+              if (err) {
+                rootServer?.close();
+                sudoFailed = true;
+                event.sender.send('progress-update', { sudoFailed: true });
+                resolve(); // Don't crash, just proceed without elevation if they cancel
+              }
+            });
+          });
+        });
+      } catch (e) {
+        console.error("Failed to launch root worker:", e);
+      }
+    }
+
     const allFiles: { path: string, size: number, ext: string }[] = [];
     async function walk(targetPath: string) {
       if (myToken !== currentProcessToken) return;
@@ -208,10 +276,6 @@ app.whenReady().then(() => {
     
     let originalSizeTracker = 0;
     let compressedSizeTracker = 0;
-    
-    let sudoFailed = false;
-    let outOfSpace = false;
-    let lastSpaceCheck = 0;
 
     const updateProgress = () => {
       event.sender.send('progress-update', {
@@ -233,65 +297,6 @@ app.whenReady().then(() => {
     };
 
     updateProgress();
-
-    let rootSocket: any = null;
-    let rootServer: any = null;
-    const workerPromises = new Map<string, { resolve: (val: any) => void; reject: (err: any) => void }>();
-    
-    if (process.platform === 'darwin' && filePaths.some((p: string) => p === '/' || p.startsWith('/Applications') || p.startsWith('/Library') || p.startsWith('/System'))) {
-      const net = require('net');
-      const { exec } = require('child_process');
-      const socketPath = path.join(os.tmpdir(), `sw-ipc-${Date.now()}-${Math.random().toString(36).substring(2)}.sock`);
-      
-      try {
-        await new Promise<void>((resolve, reject) => {
-          rootServer = net.createServer((socket: any) => {
-            rootSocket = socket;
-            let buffer = '';
-            socket.on('data', (data: Buffer) => {
-              buffer += data.toString();
-              let newlineIdx;
-              while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
-                const msgStr = buffer.slice(0, newlineIdx);
-                buffer = buffer.slice(newlineIdx + 1);
-                if (!msgStr.trim()) continue;
-                try {
-                  const msg = JSON.parse(msgStr);
-                  if (msg.type === 'ready') resolve();
-                  else if (msg.type === 'result' || msg.type === 'error') {
-                    const p = workerPromises.get(msg.id);
-                    if (p) {
-                      if (msg.type === 'result') p.resolve(msg.result);
-                      else p.reject(new Error(msg.error));
-                      workerPromises.delete(msg.id);
-                    }
-                  }
-                } catch (e) {}
-              }
-            });
-          });
-
-          rootServer.listen(socketPath, () => {
-            const isPackaged = app.isPackaged;
-            const workerPath = isPackaged 
-              ? path.join(process.resourcesPath, 'app.asar/dist-electron/main/compression/sudo-worker.cjs')
-              : path.join(__dirname, 'compression', 'sudo-worker.cjs');
-              
-            const cmd = `osascript -e 'do shell script "ELECTRON_RUN_AS_NODE=1 \\"${process.execPath}\\" \\"${workerPath}\\" \\"${socketPath}\\"" with prompt "Shrink Wizard needs admin permissions to process system directories." with administrator privileges'`;
-            exec(cmd, { env: { PATH: '/usr/bin:/bin:/usr/sbin:/sbin' } }, (err: any) => {
-              if (err) {
-                rootServer?.close();
-                sudoFailed = true;
-                updateProgress();
-                resolve(); // Don't crash, just proceed without elevation if they cancel
-              }
-            });
-          });
-        });
-      } catch (e) {
-        console.error("Failed to launch root worker:", e);
-      }
-    }
 
     // 2. Processing Phase (Concurrency Pool)
     async function processConcurrency(files: typeof allFiles, initialConcurrency: number, worker: (file: typeof allFiles[0]) => Promise<void>) {
