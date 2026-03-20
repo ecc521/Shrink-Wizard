@@ -169,7 +169,7 @@ app.whenReady().then(() => {
     // Disable ASAR traversal to prevent Electron from treating .asar files as directories, which breaks OS-level stat calls
     process.noAsar = true;
 
-    event.sender.send('progress-update', { phase: 'scanning', totalMB: 0, processedMB: 0, savingsMB: 0, percentage: 0, compressedCount: 0, skippedCount: 0, failedCount: 0, alreadyCompressedCount: 0, totalFiles: 0 });
+    event.sender.send('progress-update', { phase: 'scanning', totalMB: 0, processedMB: 0, savingsMB: 0, percentage: 0, compressedCount: 0, skippedCount: 0, skippedMB: 0, failedCount: 0, alreadyCompressedCount: 0, totalFiles: 0 });
     
     const allFiles: { path: string, size: number, ext: string }[] = [];
     async function walk(targetPath: string) {
@@ -202,6 +202,7 @@ app.whenReady().then(() => {
     let savingsMB = 0;
     let compressedCount = 0;
     let skippedCount = 0;
+    let skippedMB = 0;
     let failedCount = 0;
     let alreadyCompressedCount = 0;
     
@@ -209,6 +210,8 @@ app.whenReady().then(() => {
     let compressedSizeTracker = 0;
     
     let sudoFailed = false;
+    let outOfSpace = false;
+    let lastSpaceCheck = 0;
 
     const updateProgress = () => {
       event.sender.send('progress-update', {
@@ -219,11 +222,13 @@ app.whenReady().then(() => {
         percentage: totalBytes === 0 ? 100 : Math.min(100, Math.floor((processedMB / totalMB) * 100)),
         compressedCount,
         skippedCount,
+        skippedMB,
         failedCount,
         alreadyCompressedCount,
         totalFiles,
         globalSavingsMB: globalStats.globalSavingsMB,
-        sudoFailed
+        sudoFailed,
+        outOfSpace
       });
     };
 
@@ -272,8 +277,8 @@ app.whenReady().then(() => {
               ? path.join(process.resourcesPath, 'app.asar/dist-electron/main/compression/sudo-worker.cjs')
               : path.join(__dirname, 'compression', 'sudo-worker.cjs');
               
-            const cmd = `osascript -e 'do shell script "ELECTRON_RUN_AS_NODE=1 \\"${process.execPath}\\" \\"${workerPath}\\" \\"${socketPath}\\"" with administrator privileges'`;
-            exec(cmd, (err: any) => {
+            const cmd = `osascript -e 'do shell script "ELECTRON_RUN_AS_NODE=1 \\"${process.execPath}\\" \\"${workerPath}\\" \\"${socketPath}\\"" with prompt "Shrink Wizard needs admin permissions to process system directories." with administrator privileges'`;
+            exec(cmd, { env: { PATH: '/usr/bin:/bin:/usr/sbin:/sbin' } }, (err: any) => {
               if (err) {
                 rootServer?.close();
                 sudoFailed = true;
@@ -314,13 +319,38 @@ app.whenReady().then(() => {
           while (isQueuePaused && myToken === currentProcessToken) {
             await new Promise(r => setTimeout(r, 500));
           }
-          if (myToken !== currentProcessToken) break;
+          if (myToken !== currentProcessToken || outOfSpace) break;
           const file = files[index++];
+
+          // Disk Space Safeguard for Decompression (checks globally every 2s)
+          if (mode === 'restore') {
+            const now = Date.now();
+            if (now - lastSpaceCheck > 2000) {
+              lastSpaceCheck = now;
+              try {
+                const statFs = await fs.promises.statfs(path.dirname(file.path));
+                const freeSpace = statFs.bavail * statFs.bsize;
+                if (freeSpace < 2 * 1024 * 1024 * 1024) { // 2 GB hard limit
+                  outOfSpace = true;
+                  updateProgress();
+                  break;
+                }
+              } catch (err) {
+                // Ignore statfs errors (e.g. read-only mounts that don't support it)
+              }
+            }
+          }
+
+          let processSuccess = true;
           await worker(file).catch(err => {
             failedCount++;
+            skippedMB += file.size / (1024 * 1024);
+            processSuccess = false;
             console.error('File process err:', err);
           });
-          processedMB += file.size / (1024 * 1024);
+          if (processSuccess) {
+            processedMB += file.size / (1024 * 1024);
+          }
           updateProgress();
         }
         activeWorkers--;
@@ -356,6 +386,7 @@ app.whenReady().then(() => {
           compressedCount++;
         } else {
           skippedCount++;
+          skippedMB += f.size / (1024 * 1024);
         }
         return;
       }
@@ -363,7 +394,6 @@ app.whenReady().then(() => {
       if (mode === 'restore' && f.ext === '.jxl') {
         const jpgDest = f.path.replace(/\.jxl$/i, '.jpg');
         const stats = await restoreJxlToJpegNative(f.path, jpgDest);
-        processedMB += stats.originalSize / (1024 * 1024); // Size before decompression
         savingsMB += (stats.originalSize - stats.uncompressedSize) / (1024 * 1024);
         originalSizeTracker += stats.uncompressedSize;
         compressedSizeTracker += stats.originalSize;
@@ -409,6 +439,7 @@ app.whenReady().then(() => {
                 compressedCount++;
             } else {
                 skippedCount++; // It just didn't shrink
+                skippedMB += f.size / (1024 * 1024);
             }
           } else {
             // Internally marked false, meaning it's already compressed
@@ -431,7 +462,6 @@ app.whenReady().then(() => {
           stats = await winUndo(f.path);
         }
         if (stats) {
-            processedMB += stats.originalSize / (1024 * 1024); // Extent before decomp
             savingsMB += (stats.originalSize - stats.uncompressedSize) / (1024 * 1024);
             originalSizeTracker += stats.uncompressedSize;
             compressedSizeTracker += stats.originalSize;
@@ -449,7 +479,7 @@ app.whenReady().then(() => {
     event.sender.send('progress-update', { 
         phase: 'done',
         totalMB, processedMB, savingsMB, percentage: 100,
-        compressedCount, skippedCount, failedCount, alreadyCompressedCount, totalFiles, sudoFailed
+        compressedCount, skippedCount, skippedMB, failedCount, alreadyCompressedCount, totalFiles, sudoFailed, outOfSpace
     });
 
     return {

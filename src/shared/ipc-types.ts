@@ -21,6 +21,7 @@ export interface ProgressData {
   percentage: number;
   compressedCount: number;
   skippedCount: number;
+  skippedMB: number;
   failedCount: number;
   alreadyCompressedCount: number;
   totalFiles: number;
@@ -28,6 +29,8 @@ export interface ProgressData {
   currentSettingsSavingsMB?: number;
   maxSettingsSavingsMB?: number;
   fileCount?: number;
+  sudoFailed?: boolean;
+  outOfSpace?: boolean;
 }
 
 /**

@@ -17,14 +17,25 @@ const formatPath = (fullPath: string) => {
 };
 
 const formatBytes = (mb: number | undefined, fixed: boolean = false) => {
-  if (!mb) return fixed ? '0.00 MB' : '0 MB';
+  if (!mb) return '0 MB';
   const isNegative = mb < 0;
   const absMb = Math.abs(mb);
 
   const formatted = (() => {
-    if (absMb >= 1024) return `${(absMb / 1024).toFixed(2)} GB`;
-    if (absMb < 1) return `${(absMb * 1024).toFixed(fixed ? 2 : 0)} KB`;
-    return `${absMb.toFixed(fixed ? 2 : 1)} MB`;
+    const rawBytes = absMb * 1024 * 1024;
+    if (!fixed) {
+       // Original dynamic precision fallback for secondary text
+       if (rawBytes >= 1000 * 1000 * 1000) return `${parseFloat((rawBytes / 1e9).toFixed(2))} GB`;
+       if (rawBytes >= 1000 * 1000) return `${parseFloat((rawBytes / 1e6).toFixed(1))} MB`;
+       if (rawBytes >= 1000) return `${parseFloat((rawBytes / 1e3).toFixed(0))} KB`;
+       return `${rawBytes.toFixed(0)} B`;
+    }
+    // Fixed UI Cards Mode
+    // Prevent 1000.00 by forcing the unit bump at strictly 999.99
+    if (rawBytes >= 999.995 * 1000 * 1000) return `${(rawBytes / 1e9).toFixed(2)} GB`;
+    if (rawBytes >= 999.995 * 1000) return `${(rawBytes / 1e6).toFixed(2)} MB`;
+    if (rawBytes >= 999.995) return `${(rawBytes / 1e3).toFixed(2)} KB`;
+    return `${rawBytes.toFixed(0)} B`;
   })();
 
   return isNegative ? `-${formatted}` : formatted;
@@ -34,7 +45,7 @@ const formatCompactNumber = (num: number | undefined) => {
   if (num === undefined) return '0';
   return Intl.NumberFormat('en-US', {
     notation: 'compact',
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(num);
 };
@@ -328,7 +339,6 @@ export default function App() {
                 isPro={isPro}
                 onMigrate={(paths) => {
                   setPendingScannerPaths(paths);
-                  setAutoStartCompression(true);
                   setActiveTab('compress');
                 }}
                 onProcessingChange={setIsGlobalProcessing}
@@ -743,6 +753,7 @@ function CompressionView({
   const [globalSavingsMB, setGlobalSavingsMB] = useState(0);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [sudoFailed, setSudoFailed] = useState(false);
+  const [outOfSpace, setOutOfSpace] = useState(false);
   const [isDraggingOverTarget, setIsDraggingOverTarget] = useState(false);
   const isProcessingRef = useRef(false);
 
@@ -815,6 +826,9 @@ function CompressionView({
         if (data.sudoFailed !== undefined && data.sudoFailed) {
           setSudoFailed(true);
         }
+        if (data.outOfSpace !== undefined && data.outOfSpace) {
+          setOutOfSpace(true);
+        }
         setActiveQueue(prev => prev.map(job => {
           if (job.status === 'processing' || job.status === 'pending') {
             return { ...job, status: 'processing', progressData: data };
@@ -841,6 +855,8 @@ function CompressionView({
   const totalSavingsMB = activeQueue.reduce((acc, job) => acc + (job.progressData?.savingsMB || 0), 0);
   const totalCompressed = activeQueue.reduce((acc, job) => acc + (job.progressData?.compressedCount || 0), 0);
   const totalSkipped = activeQueue.reduce((acc, job) => acc + (job.progressData?.skippedCount || 0), 0);
+  const totalSkippedMB = activeQueue.reduce((acc, job) => acc + (job.progressData?.skippedMB || 0), 0);
+  const totalFailed = activeQueue.reduce((acc, job) => acc + (job.progressData?.failedCount || 0), 0);
   const totalIncompressible = activeQueue.reduce((acc, job) => acc + (job.progressData?.alreadyCompressedCount || 0), 0);
 
   const percentSaved = totalProcessedMB > 0 ? Math.round((totalSavingsMB / totalProcessedMB) * 100) : 0;
@@ -867,8 +883,25 @@ function CompressionView({
     }
   };
 
+  const handleFixNow = () => {
+    if (window.electron) window.electron.abortProcess();
+    isProcessingRef.current = false;
+    setIsProcessing(false);
+    setActiveQueue(prev => prev.map(job => ({
+      ...job,
+      status: 'pending',
+      progressData: null
+    })));
+    setSudoFailed(false);
+    setOutOfSpace(false);
+    setTimeout(() => {
+      startQueue();
+    }, 250);
+  };
+
   const startQueue = async () => {
     setSudoFailed(false);
+    setOutOfSpace(false);
     if (isProcessingRef.current) return;
     if (!window.electron) return;
 
@@ -876,11 +909,15 @@ function CompressionView({
     setIsProcessing(true);
 
     const getNextJob = () => new Promise<QueueJob | undefined>(resolve => {
+      let jobTarget: QueueJob | undefined;
       setActiveQueue(prev => {
         const nextJob = prev.find(j => j.status === 'pending');
-        resolve(nextJob);
+        if (!jobTarget) {
+          jobTarget = nextJob;
+          setTimeout(() => resolve(nextJob), 0);
+        }
         if (nextJob) {
-          return prev.map(j => j.id === nextJob.id ? { ...j, status: 'processing', progressData: { phase: 'scanning', totalMB: 0, processedMB: 0, savingsMB: 0, percentage: 0, compressedCount: 0, skippedCount: 0, failedCount: 0, alreadyCompressedCount: 0, totalFiles: 0 } } : j);
+          return prev.map(j => j.id === nextJob.id ? { ...j, status: 'processing', progressData: { phase: 'scanning', totalMB: 0, processedMB: 0, savingsMB: 0, percentage: 0, compressedCount: 0, skippedCount: 0, skippedMB: 0, failedCount: 0, alreadyCompressedCount: 0, totalFiles: 0 } } : j);
         }
         return prev;
       });
@@ -895,6 +932,7 @@ function CompressionView({
         break;
       }
 
+      if (window.electron) window.electron.removeProgressListeners();
       window.electron.onProgress((data: ProgressData) => {
         setActiveQueue(prev => prev.map(j => j.id === nextJob!.id ? { ...j, progressData: data } : j));
       });
@@ -909,7 +947,7 @@ function CompressionView({
         console.error('Process error:', err);
         setActiveQueue(prev => prev.map(j => j.id === nextJob!.id ? { ...j, status: 'failed' } : j));
       } finally {
-        // Only remove progress listeners when ending the ENTIRE queue processing loop
+        if (window.electron) window.electron.removeProgressListeners();
       }
     }
 
@@ -1011,20 +1049,27 @@ function CompressionView({
                 ? "Drop files, folders, photos, and/or applications here to shrink them gracefully."
                 : "Drop previously compressed files here to reverse the compression."}
             </p>
-            {needsElevation && !isAdminUser && (
-              <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid var(--warning)', borderRadius: '8px', color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <AlertTriangle size={18} />
-                <span style={{ fontSize: '14px', lineHeight: '1.5' }}>
-                  {sudoFailed ? (
-                    <><strong>Invalid Login Info.</strong> Skipping Priviliged Files.</>
-                  ) : (
-                    <><strong>Some of these files require Admin permissions.</strong> You will be asked for an Admin Login.</>
-                  )}
-                </span>
-              </div>
-            )}
           </div>
         </div>
+
+        {(needsElevation && !isAdminUser) || sudoFailed ? (
+          <div style={{ marginBottom: '24px', padding: '12px 16px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid var(--warning)', borderRadius: '8px', color: 'var(--warning)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={18} />
+              <span style={{ fontSize: '14px', lineHeight: '1.5' }}>
+                {sudoFailed ? (
+                  <>{formatBytes(totalSkippedMB, true)} of files skipped due to <strong>missing Admin permissions.</strong></>
+                ) : (
+                  <><strong>Some of these files require Admin permissions.</strong> You will be asked for an Admin Login.</>
+                )}
+              </span>
+            </div>
+            {sudoFailed && (
+              <button className="btn" style={{ background: 'transparent', border: '1px solid var(--warning)', color: 'var(--warning)', padding: '6px 16px', fontSize: '13px', fontWeight: 'bold' }} onClick={handleFixNow}>Fix Now</button>
+            )}
+          </div>
+        ) : null}
+
 
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: '24px' }}>
           {/* Always show the slim Drop Zone when Pre-Compression */}
@@ -1113,22 +1158,33 @@ function CompressionView({
 
               {/* Active / Finished Queue Header Metrics */}
               {(isProcessing || doneJobs.length > 0) && (
-                <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-root)' }}>
-                  <div style={{ display: 'flex', gap: '24px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' }}>{isCompress ? 'Total Saved' : 'Total Used'}</span>
-                      <strong style={{ fontSize: '18px', color: percentSaved < 0 ? 'var(--accent-primary)' : 'var(--success)' }}>{formatBytes(Math.abs(totalSavingsMB))}</strong>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px', padding: '24px', background: 'var(--bg-root)', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'center', padding: '16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px' }}>{isCompress ? 'Total Saved' : 'Size Increase'}</div>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div id="live-savings-val" style={{ fontSize: '36px', fontWeight: '700', color: isCompress ? 'var(--success)' : 'var(--warning)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>{formatBytes(Math.abs(totalSavingsMB), true)}</div>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' }}>Processed MB</span>
-                      <strong style={{ fontSize: '18px', color: 'var(--text-primary)' }}>{formatBytes(totalProcessedMB)}</strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'center', padding: '16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px' }}>Processed Data</div>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div id="live-scanned-val" style={{ fontSize: '36px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>{formatBytes(totalProcessedMB, true)}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'center', padding: '16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px' }}>Files Processed</div>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div id="live-files-val" style={{ fontSize: '36px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>{formatCompactNumber(totalCompressed + totalSkipped + totalFailed + totalIncompressible)}</div>
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    <span>{isCompress ? 'Compressed' : 'Decompressed'}: <strong style={{ color: 'var(--text-primary)' }}>{totalCompressed}</strong></span>
-                    <span>Skipped: <strong style={{ color: 'var(--text-primary)' }}>{totalSkipped}</strong></span>
-                  </div>
+                  {outOfSpace && (
+                    <div style={{ background: 'var(--error)', color: '#fff', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '600' }}>Decompression stopped. You have less than 2.00 GB of free space left on your active drive!</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1264,7 +1320,7 @@ function CompressionView({
                     {doneJobs.length > 0 && (
                       <button
                         className="btn btn-outline"
-                        style={{ flex: activeQueue.some(j => j.status === 'pending') ? 1 : '100%', padding: '14px', fontSize: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}
+                        style={{ flex: activeQueue.some(j => j.status === 'pending') ? 1 : '100%', padding: '14px', fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}
                         onClick={() => setActiveQueue(prev => prev.filter(j => j.status !== 'done' && j.status !== 'failed'))}
                       >
                         Clear Completed
@@ -1284,7 +1340,7 @@ function CompressionView({
                     </button>
                     <button
                       className="btn btn-outline"
-                      style={{ flex: 1, padding: '14px', fontSize: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}
+                      style={{ flex: 1, padding: '14px', fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}
                       onClick={() => {
                         isProcessingRef.current = false;
                         setIsProcessing(false);
@@ -1310,7 +1366,7 @@ function CompressionView({
                     </button>
                     <button
                       className="btn btn-outline"
-                      style={{ flex: 1, padding: '14px', fontSize: '16px', fontWeight: '600', color: 'var(--text-secondary)' }}
+                      style={{ flex: 1, padding: '14px', fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}
                       onClick={() => {
                         isProcessingRef.current = false;
                         setIsProcessing(false);
@@ -1447,16 +1503,28 @@ function SettingsView({
               Select the application appearance.
             </p>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', flex: '0 0 240px' }}>
-            <select
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', outline: 'none' }}
+          <div style={{ display: 'flex', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '4px', border: '1px solid var(--border)' }}>
+            <button
+              className={`toggle-btn ${theme === 'system' ? 'btn-on' : ''}`}
+              onClick={() => setTheme('system')}
+              style={{ color: theme === 'system' ? 'white' : 'var(--text-secondary)', background: theme === 'system' ? 'var(--accent-primary)' : 'transparent', border: 'none' }}
             >
-              <option value="system">System Default</option>
-              <option value="dark">Dark</option>
-              <option value="light">Light</option>
-            </select>
+              System
+            </button>
+            <button
+              className={`toggle-btn ${theme === 'light' ? 'btn-on' : ''}`}
+              onClick={() => setTheme('light')}
+              style={{ color: theme === 'light' ? 'white' : 'var(--text-secondary)', background: theme === 'light' ? 'var(--accent-primary)' : 'transparent', border: 'none' }}
+            >
+              Light
+            </button>
+            <button
+              className={`toggle-btn ${theme === 'dark' ? 'btn-on' : ''}`}
+              onClick={() => setTheme('dark')}
+              style={{ color: theme === 'dark' ? 'white' : 'var(--text-secondary)', background: theme === 'dark' ? 'var(--accent-primary)' : 'transparent', border: 'none' }}
+            >
+              Dark
+            </button>
           </div>
         </div>
       </div>
@@ -1548,14 +1616,6 @@ function SettingsView({
               style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}
             >
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-primary)', fontSize: '14px' }}>Compression Quality</span>
-                <div
-                  style={{ padding: '8px 12px', background: 'var(--bg-root)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '13px' }}
-                >
-                  Pixel Perfect (Lossless)
-                </div>
-              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1602,26 +1662,6 @@ function SettingsView({
                 )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-primary)', fontSize: '14px' }}>Preserve Metadata (EXIF/ICC)</span>
-
-                <div style={{ display: 'flex', background: 'var(--bg-secondary)', borderRadius: '20px', padding: '4px', border: '1px solid var(--border)' }}>
-                  <button
-                    className={`toggle-btn ${jpegMetadata ? 'btn-on' : ''}`}
-                    onClick={() => setJpegMetadata(true)}
-                    style={{ background: jpegMetadata ? 'var(--accent-primary)' : 'transparent', color: jpegMetadata ? 'white' : 'var(--text-secondary)', border: 'none', boxShadow: jpegMetadata ? '0 0 12px var(--accent-glow)' : 'none' }}
-                  >
-                    Yes
-                  </button>
-                  <button
-                    className={`toggle-btn ${!jpegMetadata ? 'btn-off' : ''}`}
-                    onClick={() => setJpegMetadata(false)}
-                    style={{ background: !jpegMetadata ? 'var(--bg-tertiary)' : 'transparent', color: !jpegMetadata ? 'var(--text-primary)' : 'var(--text-secondary)', border: 'none' }}
-                  >
-                    No
-                  </button>
-                </div>
-              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -2142,18 +2182,24 @@ function ScannerView({ isAdminUser, isPro, onMigrate, onProcessingChange }: { is
                 </h2>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', width: '100%', maxWidth: '800px', marginBottom: '40px' }}>
-                <div style={{ padding: '24px', background: 'var(--bg-root)', borderRadius: 'var(--radius-lg)', border: `1px solid ${!isProcessing ? (endedEarly ? 'var(--warning)' : 'var(--success)') : 'var(--border)'}`, boxShadow: 'var(--shadow-sm)' }}>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '12px' }}>Estimated Savings</div>
-                  <div id="live-savings-val" style={{ fontSize: '40px', fontWeight: '700', color: !isProcessing ? (endedEarly ? 'var(--warning)' : 'var(--success)') : 'var(--success)', fontVariantNumeric: 'tabular-nums' }}>{formatBytes(totalSavingsMB, true)}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '20px', width: '100%', maxWidth: '800px', marginBottom: '40px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'center', padding: '16px', background: 'var(--bg-root)', borderRadius: 'var(--radius-lg)', border: `1px solid ${!isProcessing ? (endedEarly ? 'var(--warning)' : 'var(--success)') : 'var(--border)'}`, boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px' }}>Estimated Savings</div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div id="live-savings-val" style={{ fontSize: '36px', fontWeight: '700', color: !isProcessing ? (endedEarly ? 'var(--warning)' : 'var(--success)') : 'var(--success)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>{formatBytes(totalSavingsMB, true)}</div>
+                  </div>
                 </div>
-                <div style={{ padding: '24px', background: 'var(--bg-root)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '12px' }}>Data Scanned</div>
-                  <div id="live-scanned-val" style={{ fontSize: '40px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatBytes(totalScannedMB, true)}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'center', padding: '16px', background: 'var(--bg-root)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px' }}>Data Scanned</div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div id="live-scanned-val" style={{ fontSize: '36px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>{formatBytes(totalScannedMB, true)}</div>
+                  </div>
                 </div>
-                <div style={{ padding: '24px', background: 'var(--bg-root)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '12px' }}>Files Analyzed</div>
-                  <div id="live-files-val" style={{ fontSize: '40px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatCompactNumber(totalFilesScanned)}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'center', padding: '16px', background: 'var(--bg-root)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '8px' }}>Files Analyzed</div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div id="live-files-val" style={{ fontSize: '36px', fontWeight: '700', color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>{formatCompactNumber(totalFilesScanned)}</div>
+                  </div>
                 </div>
               </div>
 
@@ -2169,7 +2215,7 @@ function ScannerView({ isAdminUser, isPro, onMigrate, onProcessingChange }: { is
                     </button>
                     <button
                       className="btn btn-outline"
-                      style={{ fontSize: '16px', padding: '14px 28px', borderRadius: '30px', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+                      style={{ fontSize: '16px', padding: '14px 28px', borderRadius: '30px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
                       onClick={() => {
                         window.electron.abortScan();
                         setActiveQueue([]);
@@ -2182,7 +2228,7 @@ function ScannerView({ isAdminUser, isPro, onMigrate, onProcessingChange }: { is
                 ) : (
                   <button
                     className="btn btn-outline"
-                    style={{ fontSize: '16px', padding: '14px 32px', borderRadius: '30px', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+                    style={{ fontSize: '16px', padding: '14px 32px', borderRadius: '30px', color: 'var(--text-primary)', borderColor: 'var(--border)' }}
                     onClick={() => {
                       setEndedEarly(true);
                       isProcessingRef.current = false;

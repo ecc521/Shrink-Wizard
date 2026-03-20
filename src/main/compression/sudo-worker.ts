@@ -1,7 +1,7 @@
 import * as net from 'net';
 import * as os from 'os';
 import * as path from 'path';
-import * as fs from 'fs';
+import fs from 'fs';
 import { transparentlyCompress, undoTransparentCompression } from './macos';
 
 const socketPath = process.argv[2];
@@ -18,11 +18,16 @@ function connect() {
     client.write(JSON.stringify({ type: 'ready' }) + '\n');
   });
 
+  let buffer = '';
   client.on('data', async (data) => {
-    // Note: Multiple messages might arrive in one chunk separated by newline
-    const messages = data.toString().split('\n').filter(l => l.trim().length > 0);
-    
-    for (const msgStr of messages) {
+    buffer += data.toString();
+    let newlineIdx;
+    while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+      const msgStr = buffer.slice(0, newlineIdx);
+      buffer = buffer.slice(newlineIdx + 1);
+      
+      if (!msgStr.trim()) continue;
+      
       try {
         const msg = JSON.parse(msgStr);
         if (msg.type === 'process') {

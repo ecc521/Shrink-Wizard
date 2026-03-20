@@ -104,3 +104,17 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Base UI Component Normalization */
+button {
+  cursor: pointer;
+  font-family: inherit;
+  transition: var(--transition);
+}
+
+.btn-outline {
+  background: transparent;
+}
+.btn-outline:hover {
+  background: var(--bg-tertiary);
+}
