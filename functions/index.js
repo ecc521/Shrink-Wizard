@@ -8,10 +8,10 @@ const db = admin.firestore();
 
 // Helper to generate a classic cryptographically secure 16-character block key (XXXX-XXXX-XXXX-XXXX)
 function generateLicenseKey() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let key = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let key = "";
   for (let i = 0; i < 16; i++) {
-    if (i > 0 && i % 4 === 0) key += '-';
+    if (i > 0 && i % 4 === 0) key += "-";
     key += chars.charAt(crypto.randomInt(chars.length));
   }
   return key;
@@ -27,31 +27,38 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
   try {
     event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
   } catch (err) {
-    functions.logger.error("⚠️ Webhook signature verification failed.", err.message);
+    functions.logger.error(
+      "⚠️ Webhook signature verification failed.",
+      err.message,
+    );
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   // Handle a successful Pro License checkout
-  if (event.type === 'checkout.session.completed') {
+  if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    
+
     // Generate a classic 16-character License Key
     const newLicenseKey = generateLicenseKey();
 
     try {
-      await db.collection("licenses").doc(newLicenseKey).set({
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        stripeSessionId: session.id,
-        customerEmail: session.customer_details?.email || null,
-        activations: 0,
-        maxActivations: 5,
-        isActive: true
-      });
-      functions.logger.info(`✅ Generated new 5-device license key: ${newLicenseKey} for ${session.customer_details?.email}`);
-      
-      // Note: Make sure your Stripe product uses Stripe's built-in customer emails 
-      // or set up an email sender here (e.g. SendGrid/Resend) to email the customer their `newLicenseKey`.
+      await db
+        .collection("licenses")
+        .doc(newLicenseKey)
+        .set({
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          stripeSessionId: session.id,
+          customerEmail: session.customer_details?.email || null,
+          activations: 0,
+          maxActivations: 5,
+          isActive: true,
+        });
+      functions.logger.info(
+        `✅ Generated new 5-device license key: ${newLicenseKey} for ${session.customer_details?.email}`,
+      );
 
+      // Note: Make sure your Stripe product uses Stripe's built-in customer emails
+      // or set up an email sender here (e.g. SendGrid/Resend) to email the customer their `newLicenseKey`.
     } catch (dbErr) {
       functions.logger.error("❌ Failed to save license to Firestore", dbErr);
       return res.status(500).send("Database Error");
@@ -66,16 +73,19 @@ exports.activateLicense = functions.https.onCall(async (data, context) => {
   const { licenseKey, machineId } = data;
 
   if (!licenseKey || !machineId) {
-    throw new functions.https.HttpsError('invalid-argument', 'Missing licenseKey or machineId');
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Missing licenseKey or machineId",
+    );
   }
 
   const licenseRef = db.collection("licenses").doc(licenseKey);
-  
+
   return db.runTransaction(async (transaction) => {
     const doc = await transaction.get(licenseRef);
 
     if (!doc.exists || doc.data().isActive === false) {
-      throw new functions.https.HttpsError('not-found', 'invalid-key');
+      throw new functions.https.HttpsError("not-found", "invalid-key");
     }
 
     const license = doc.data();
@@ -83,20 +93,23 @@ exports.activateLicense = functions.https.onCall(async (data, context) => {
 
     // If this machine is already registered on this key, return success (idempotent, no cost)
     if (activeMachines.includes(machineId)) {
-      return { success: true, message: 'Already activated on this device.' };
+      return { success: true, message: "Already activated on this device." };
     }
 
     // Checking the 5 device limit
     if (license.activations >= license.maxActivations) {
-      throw new functions.https.HttpsError('resource-exhausted', 'limit-reached');
+      throw new functions.https.HttpsError(
+        "resource-exhausted",
+        "limit-reached",
+      );
     }
 
     // It is a new machine and we have slots left. Increment and link.
     transaction.update(licenseRef, {
       activations: admin.firestore.FieldValue.increment(1),
-      activeMachines: admin.firestore.FieldValue.arrayUnion(machineId)
+      activeMachines: admin.firestore.FieldValue.arrayUnion(machineId),
     });
 
-    return { success: true, message: 'License activated successfully.' };
+    return { success: true, message: "License activated successfully." };
   });
 });

@@ -1,5 +1,5 @@
-import * as os from 'os';
-import { spawn } from 'child_process';
+import * as os from "os";
+import { spawn } from "child_process";
 
 export interface WindowsCompressOptions {
   /**
@@ -8,7 +8,7 @@ export interface WindowsCompressOptions {
    * XPRESS4K/8K/16K are faster but less compressed.
    * Default: LZX
    */
-  algorithm?: 'LZX' | 'XPRESS4K' | 'XPRESS8K' | 'XPRESS16K';
+  algorithm?: "LZX" | "XPRESS4K" | "XPRESS8K" | "XPRESS16K";
 }
 
 export interface WindowsCompressResult {
@@ -21,37 +21,39 @@ export interface WindowsCompressResult {
 /**
  * Parses the output of compact.exe to determine existing compression state and sizes.
  */
-export async function getCompressionData(src: string): Promise<WindowsCompressResult> {
+export async function getCompressionData(
+  src: string,
+): Promise<WindowsCompressResult> {
   return new Promise((resolve, reject) => {
-    const detector = spawn('compact', [src]);
-    let output = '';
+    const detector = spawn("compact", [src]);
+    let output = "";
 
-    detector.stdout.on('data', (data) => {
+    detector.stdout.on("data", (data) => {
       output += data.toString();
     });
 
-    detector.stderr.on('data', (data) => reject(new Error(data.toString())));
+    detector.stderr.on("data", (data) => reject(new Error(data.toString())));
 
-    detector.on('close', (code) => {
+    detector.on("close", (code) => {
       // Note: compact.exe can exit with non-zero if some files aren't compressed, but still provide valid output.
       try {
         // Look for: "    12345 :      6789 = x.x to 1"
         const match = output.match(/(\d+)\s+:\s+(\d+)\s+=/);
-        
+
         let originalSize = 0;
         let compressedSize = 0;
-        
+
         if (match) {
           originalSize = Number(match[1]);
           compressedSize = Number(match[2]);
         }
-        
-        const isCompressed = output.includes('1 are compressed');
+
+        const isCompressed = output.includes("1 are compressed");
 
         resolve({
           isCompressed,
           originalSize,
-          compressedSize
+          compressedSize,
         });
       } catch (e) {
         reject(new Error(`Failed to parse compact output: ${e}`));
@@ -65,31 +67,33 @@ export async function getCompressionData(src: string): Promise<WindowsCompressRe
  */
 export async function transparentlyCompress(
   src: string,
-  options?: WindowsCompressOptions
+  options?: WindowsCompressOptions,
 ): Promise<WindowsCompressResult> {
   const data = await getCompressionData(src);
   if (data.isCompressed) {
     return {
       ...data,
-      mark: false
+      mark: false,
     };
   }
 
-  const algo = (options && options.algorithm) ? options.algorithm : 'LZX';
+  const algo = options && options.algorithm ? options.algorithm : "LZX";
 
   return new Promise((resolve, reject) => {
-    const compressor = spawn('compact', ['/C', `/EXE:${algo}`, src]);
+    const compressor = spawn("compact", ["/C", `/EXE:${algo}`, src]);
     if (compressor.pid) {
-      try { os.setPriority(compressor.pid, os.constants.priority.PRIORITY_LOW); } catch (e) {}
+      try {
+        os.setPriority(compressor.pid, os.constants.priority.PRIORITY_LOW);
+      } catch (e) {}
     }
-    let errorOutput = '';
+    let errorOutput = "";
 
-    compressor.stderr.on('data', (data) => {
+    compressor.stderr.on("data", (data) => {
       errorOutput += data.toString();
     });
 
-    compressor.on('close', async (code) => {
-      if (code !== 0 && !errorOutput.includes('OK')) {
+    compressor.on("close", async (code) => {
+      if (code !== 0 && !errorOutput.includes("OK")) {
         // Compact sometimes returns non-zero even on success, so we rely on fetching the data again
         // to verify if it worked.
       }
@@ -98,7 +102,7 @@ export async function transparentlyCompress(
         const newData = await getCompressionData(src);
         resolve({
           ...newData,
-          mark: true
+          mark: true,
         });
       } catch (e) {
         reject(e);
@@ -110,21 +114,27 @@ export async function transparentlyCompress(
 /**
  * Removes transparent compression from a file on Windows using compact.exe
  */
-export async function undoTransparentCompression(src: string): Promise<{originalSize: number, uncompressedSize: number}> {
-  const initialDiskUsage = await getCompressionData(src).catch(() => ({ compressedSize: 0 })).then(d => d.compressedSize);
-  
-  await new Promise<void>((resolve, reject) => {
-    const decompressor = spawn('compact', ['/U', '/EXE:LZX', src]); // The algorithm flag doesn't matter much for decompression
-    if (decompressor.pid) {
-      try { os.setPriority(decompressor.pid, os.constants.priority.PRIORITY_LOW); } catch (e) {}
-    }
-    let errorOutput = '';
+export async function undoTransparentCompression(
+  src: string,
+): Promise<{ originalSize: number; uncompressedSize: number }> {
+  const initialDiskUsage = await getCompressionData(src)
+    .catch(() => ({ compressedSize: 0 }))
+    .then((d) => d.compressedSize);
 
-    decompressor.stderr.on('data', (data) => {
+  await new Promise<void>((resolve, reject) => {
+    const decompressor = spawn("compact", ["/U", "/EXE:LZX", src]); // The algorithm flag doesn't matter much for decompression
+    if (decompressor.pid) {
+      try {
+        os.setPriority(decompressor.pid, os.constants.priority.PRIORITY_LOW);
+      } catch (e) {}
+    }
+    let errorOutput = "";
+
+    decompressor.stderr.on("data", (data) => {
       errorOutput += data.toString();
     });
 
-    decompressor.on('close', (code) => {
+    decompressor.on("close", (code) => {
       if (code !== 0 && errorOutput) {
         reject(new Error(`compact /U failed: ${errorOutput}`));
       } else {
@@ -133,10 +143,12 @@ export async function undoTransparentCompression(src: string): Promise<{original
     });
   });
 
-  const finalDiskUsage = await getCompressionData(src).catch(() => ({ compressedSize: 0 })).then(d => d.compressedSize);
+  const finalDiskUsage = await getCompressionData(src)
+    .catch(() => ({ compressedSize: 0 }))
+    .then((d) => d.compressedSize);
   return {
     originalSize: initialDiskUsage,
-    uncompressedSize: finalDiskUsage
+    uncompressedSize: finalDiskUsage,
   };
 }
 
@@ -146,16 +158,19 @@ export async function undoTransparentCompression(src: string): Promise<{original
  */
 export async function queryCompactOS(): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    const query = spawn('compact', ['/CompactOS:query']);
-    let output = '';
+    const query = spawn("compact", ["/CompactOS:query"]);
+    let output = "";
 
-    query.stdout.on('data', (data) => {
+    query.stdout.on("data", (data) => {
       output += data.toString();
     });
 
-    query.on('close', (code) => {
+    query.on("close", (code) => {
       // Typically: "The system is in the Compact state. It will remain in this state unless an administrator changes it."
-      if (output.includes('in the Compact state') && !output.includes('not in')) {
+      if (
+        output.includes("in the Compact state") &&
+        !output.includes("not in")
+      ) {
         resolve(true);
       } else {
         resolve(false);
@@ -171,21 +186,27 @@ export async function queryCompactOS(): Promise<boolean> {
  */
 export async function toggleCompactOS(enable: boolean): Promise<void> {
   return new Promise((resolve, reject) => {
-    const toggle = spawn('compact', [`/CompactOS:${enable ? 'always' : 'never'}`]);
-    let output = '';
-    let errorOutput = '';
+    const toggle = spawn("compact", [
+      `/CompactOS:${enable ? "always" : "never"}`,
+    ]);
+    let output = "";
+    let errorOutput = "";
 
-    toggle.stdout.on('data', (data) => {
+    toggle.stdout.on("data", (data) => {
       output += data.toString();
     });
 
-    toggle.stderr.on('data', (data) => {
+    toggle.stderr.on("data", (data) => {
       errorOutput += data.toString();
     });
 
-    toggle.on('close', (code) => {
-      if (code !== 0 && !output.includes('Completed')) {
-        reject(new Error(`CompactOS toggle failed. Ensure you have Admin rights. Code: ${code}. ${errorOutput || output}`));
+    toggle.on("close", (code) => {
+      if (code !== 0 && !output.includes("Completed")) {
+        reject(
+          new Error(
+            `CompactOS toggle failed. Ensure you have Admin rights. Code: ${code}. ${errorOutput || output}`,
+          ),
+        );
       } else {
         resolve();
       }

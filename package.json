@@ -1,177 +1,194 @@
 {
-    "name": "shrink-wizard",
-    "version": "3.0.0",
-    "homepage": "https://shrinkwizard.com",
-    "repository": "https://github.com/ecc521/Space-Saver",
-    "type": "module",
-    "main": "dist-electron/main/index.cjs",
-    "author": {
-        "name": "Tucker Willenborg",
-        "email": "admin@rivers.run"
+  "name": "shrink-wizard",
+  "version": "3.0.0",
+  "homepage": "https://shrinkwizard.com",
+  "repository": "https://github.com/ecc521/Space-Saver",
+  "type": "module",
+  "main": "dist-electron/main/index.cjs",
+  "author": {
+    "name": "Tucker Willenborg",
+    "email": "admin@rivers.run"
+  },
+  "scripts": {
+    "build:main": "node scripts/build-main.mjs",
+    "dev": "npm run build:main && concurrently \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+    "build": "tsc && vite build && tsc -p tsconfig.node.json && npm run build:main",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "lint": "eslint src/ --quiet",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "preview": "vite preview",
+    "generate-licenses": "license-checker --production --json --out src/renderer/assets/npm-licenses.json"
+  },
+  "dmg": {
+    "format": "UDBZ"
+  },
+  "build": {
+    "copyright": "Copyright © 2019 Tucker Willenborg",
+    "productName": "Shrink Wizard",
+    "appId": "com.electron.shrink-wizard",
+    "compression": "maximum",
+    "directories": {
+      "output": "../Space-Saver-Builds"
     },
-    "scripts": {
-        "build:main": "node scripts/build-main.mjs",
-        "dev": "npm run build:main && concurrently \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
-        "build": "tsc && vite build && tsc -p tsconfig.node.json && npm run build:main",
-        "pack": "npm run build && electron-builder --dir",
-        "dist": "npm run build && electron-builder",
-        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-        "preview": "vite preview",
-        "generate-licenses": "license-checker --production --json --out src/renderer/assets/npm-licenses.json"
+    "publish": {
+      "provider": "github",
+      "releaseType": "prerelease",
+      "owner": "ecc521",
+      "repo": "shrinkwizard.com"
     },
-    "dmg": {
-        "format": "UDBZ"
-    },
-    "build": {
-        "copyright": "Copyright © 2019 Tucker Willenborg",
-        "productName": "Shrink Wizard",
-        "appId": "com.electron.shrink-wizard",
-        "compression": "maximum",
-        "directories": {
-            "output": "../Space-Saver-Builds"
-        },
-        "publish": {
-            "provider": "github",
-            "releaseType": "prerelease",
-            "owner": "ecc521",
-            "repo": "shrinkwizard.com"
-        },
-        "fileAssociations": [
-            {
-                "ext": [
-                    "jpg",
-                    "jpeg"
-                ],
-                "name": "JPEG Image",
-                "role": "Viewer"
-            },
-            {
-                "ext": [
-                    "png"
-                ],
-                "name": "PNG Image",
-                "role": "Viewer"
-            },
-            {
-                "ext": [
-                    "mp4"
-                ],
-                "name": "MPEG-4 Video",
-                "role": "Viewer"
-            },
-            {
-                "ext": [
-                    "ogg"
-                ],
-                "name": "ogg Video",
-                "role": "Viewer"
-            },
-            {
-                "ext": [
-                    "wav"
-                ],
-                "name": "wav Audio",
-                "role": "Viewer"
-            },
-            {
-                "ext": [
-                    "webm"
-                ],
-                "name": "webm Video",
-                "role": "Viewer"
-            },
-            {
-                "ext": [
-                    "webp"
-                ],
-                "name": "WebP Image",
-                "role": "Viewer"
-            },
-            {
-                "ext": [
-                    "flac"
-                ],
-                "name": "FLAC Audio",
-                "role": "Viewer"
-            },
-            {
-                "ext": [
-                    "m4a"
-                ],
-                "name": "M4A Audio",
-                "role": "Viewer"
-            }
+    "fileAssociations": [
+      {
+        "ext": [
+          "jpg",
+          "jpeg"
         ],
-        "mac": {
-            "target": [
-                "dmg",
-                "zip"
-            ],
-            "extraResources": [
-                "bin/*darwin*"
-            ],
-            "extraFiles": [
-                {
-                    "from": "build/com.shrinkwizard.helper.plist",
-                    "to": "Library/LaunchDaemons/com.shrinkwizard.helper.plist"
-                },
-                {
-                    "from": "build/HelperInstaller",
-                    "to": "MacOS/HelperInstaller"
-                }
-            ],
-            "category": "public.app-category.utilities",
-            "darkModeSupport": true,
-            "type": "distribution",
-            "icon": "assets/icon.icns",
-            "identity": null
+        "name": "JPEG Image",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "png"
+        ],
+        "name": "PNG Image",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "mp4"
+        ],
+        "name": "MPEG-4 Video",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "ogg"
+        ],
+        "name": "ogg Video",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "wav"
+        ],
+        "name": "wav Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "webm"
+        ],
+        "name": "webm Video",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "webp"
+        ],
+        "name": "WebP Image",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "flac"
+        ],
+        "name": "FLAC Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "m4a"
+        ],
+        "name": "M4A Audio",
+        "role": "Viewer"
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "extraResources": [
+        "bin/*darwin*"
+      ],
+      "extraFiles": [
+        {
+          "from": "build/com.shrinkwizard.helper.plist",
+          "to": "Library/LaunchDaemons/com.shrinkwizard.helper.plist"
         },
-        "win": {
-            "target": [
-                "nsis"
-            ],
-            "extraResources": [
-                "bin/*.exe"
-            ],
-            "icon": "assets/icon.ico"
-        },
-        "linux": {
-            "target": [
-                "deb"
-            ],
-            "extraResources": [
-                "bin/*linux*"
-            ],
-            "synopsis": "Saves disk space through lossless file compression.",
-            "category": "Utility"
+        {
+          "from": "build/HelperInstaller",
+          "to": "MacOS/HelperInstaller"
         }
+      ],
+      "category": "public.app-category.utilities",
+      "darkModeSupport": true,
+      "type": "distribution",
+      "icon": "assets/icon.icns",
+      "identity": null
     },
-    "devDependencies": {
-        "@types/emscripten": "^1.41.5",
-        "@types/image-size": "^0.7.0",
-        "@types/node": "^20.11.24",
-        "@types/react": "^18.2.64",
-        "@types/react-dom": "^18.2.21",
-        "@vitejs/plugin-react": "^6.0.1",
-        "concurrently": "^8.2.2",
-        "cross-env": "^7.0.3",
-        "electron": "^41.0.2",
-        "electron-builder": "^26.8.1",
-        "esbuild": "^0.27.4",
-        "license-checker": "^25.0.1",
-        "typescript": "^5.2.2",
-        "vite": "^8.0.0",
-        "wait-on": "^7.2.0"
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "extraResources": [
+        "bin/*.exe"
+      ],
+      "icon": "assets/icon.ico"
     },
-    "dependencies": {
-        "@electron/remote": "^2.1.2",
-        "electron-updater": "^6.8.3",
-        "firebase": "^12.10.0",
-        "framer-motion": "^12.38.0",
-        "image-size": "^2.0.2",
-        "lucide-react": "^0.577.0",
-        "node-addon-api": "^8.6.0",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0"
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "extraResources": [
+        "bin/*linux*"
+      ],
+      "synopsis": "Saves disk space through lossless file compression.",
+      "category": "Utility"
     }
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/emscripten": "^1.41.5",
+    "@types/image-size": "^0.7.0",
+    "@types/node": "^20.11.24",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/ui": "^4.1.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^41.0.2",
+    "electron-builder": "^26.8.1",
+    "esbuild": "^0.27.4",
+    "eslint": "^10.1.0",
+    "eslint-plugin-react": "^7.37.5",
+    "jsdom": "^29.0.1",
+    "license-checker": "^25.0.1",
+    "prettier": "^3.8.1",
+    "typescript": "^5.2.2",
+    "typescript-eslint": "^8.57.1",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "@electron/remote": "^2.1.2",
+    "electron-updater": "^6.8.3",
+    "firebase": "^12.10.0",
+    "framer-motion": "^12.38.0",
+    "image-size": "^2.0.2",
+    "lucide-react": "^0.577.0",
+    "node-addon-api": "^8.6.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
 }

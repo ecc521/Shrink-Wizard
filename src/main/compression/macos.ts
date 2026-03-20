@@ -1,8 +1,8 @@
-import fs from 'fs';
-import * as os from 'os';
-import { spawn } from 'child_process';
-import path from 'path';
-import { app } from 'electron';
+import fs from "fs";
+import * as os from "os";
+import { spawn } from "child_process";
+import path from "path";
+import { app } from "electron";
 
 function getBasePath(): string {
   return app.isPackaged ? process.resourcesPath : app.getAppPath();
@@ -30,16 +30,16 @@ export async function getLogicalSize(src: string): Promise<number> {
  */
 export async function isTransparentlyCompressed(src: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    const detector = spawn('stat', ['-f', '%f', src]);
-    let output = '';
+    const detector = spawn("stat", ["-f", "%f", src]);
+    let output = "";
 
-    detector.stdout.on('data', (data) => {
+    detector.stdout.on("data", (data) => {
       output += data.toString();
     });
 
-    detector.stderr.on('data', (data) => reject(new Error(data.toString())));
+    detector.stderr.on("data", (data) => reject(new Error(data.toString())));
 
-    detector.on('close', (code) => {
+    detector.on("close", (code) => {
       if (code !== 0) {
         return reject(new Error(`stat exited with code ${code}`));
       }
@@ -52,16 +52,22 @@ export async function isTransparentlyCompressed(src: string): Promise<boolean> {
 /**
  * Reverts transparent compression on a file (or directory).
  */
-export async function undoTransparentCompression(src: string): Promise<{originalSize: number, uncompressedSize: number}> {
+export async function undoTransparentCompression(
+  src: string,
+): Promise<{ originalSize: number; uncompressedSize: number }> {
   const initialDiskUsage = await getDiskUsage(src);
-  
+
   await new Promise<void>((resolve, reject) => {
-    const decompressor = spawn('afscexpand', [src]);
+    const decompressor = spawn("afscexpand", [src]);
     if (decompressor.pid) {
-      try { os.setPriority(decompressor.pid, os.constants.priority.PRIORITY_LOW); } catch (e) {}
+      try {
+        os.setPriority(decompressor.pid, os.constants.priority.PRIORITY_LOW);
+      } catch (e) {}
     }
-    decompressor.stderr.on('data', (data) => reject(new Error(data.toString())));
-    decompressor.on('close', (code) => {
+    decompressor.stderr.on("data", (data) =>
+      reject(new Error(data.toString())),
+    );
+    decompressor.on("close", (code) => {
       if (code !== 0) {
         reject(new Error(`afscexpand exited with code ${code}`));
       } else {
@@ -73,7 +79,7 @@ export async function undoTransparentCompression(src: string): Promise<{original
   const finalDiskUsage = await getDiskUsage(src);
   return {
     originalSize: initialDiskUsage,
-    uncompressedSize: finalDiskUsage
+    uncompressedSize: finalDiskUsage,
   };
 }
 
@@ -85,8 +91,8 @@ export interface CompressOptions {
    * By default, it uses the system default compression algorithm.
    * If 'zlib' is specified, it will use `-T ZLIB`.
    */
-  algorithm?: 'default' | 'zlib' | 'lzfse' | 'lzvn';
-  
+  algorithm?: "default" | "zlib" | "lzfse" | "lzvn";
+
   /**
    * The zlib compression level if using ditto or if applicable.
    * Usually 1-9.
@@ -106,7 +112,7 @@ export interface CompressResult {
  */
 export async function transparentlyCompress(
   src: string,
-  options?: CompressOptions
+  options?: CompressOptions,
 ): Promise<CompressResult> {
   const isCompressed = await isTransparentlyCompressed(src);
   if (isCompressed) {
@@ -144,41 +150,48 @@ export async function transparentlyCompress(
 
   return new Promise((resolve, reject) => {
     const tmpPath = `${src}.wzd_tmp_${Math.random().toString(36).substr(2, 9)}`;
-    const args = ['--hfsCompression', src, tmpPath];
-    
-    const compressor = spawn('ditto', args);
+    const args = ["--hfsCompression", src, tmpPath];
+
+    const compressor = spawn("ditto", args);
     if (compressor.pid) {
-      try { os.setPriority(compressor.pid, os.constants.priority.PRIORITY_LOW); } catch (e) {}
+      try {
+        os.setPriority(compressor.pid, os.constants.priority.PRIORITY_LOW);
+      } catch (e) {}
     }
 
-    let errorOutput = '';
+    let errorOutput = "";
 
-    compressor.stderr.on('data', (data) => {
+    compressor.stderr.on("data", (data) => {
       errorOutput += data.toString();
     });
 
-    compressor.on('close', async (code) => {
+    compressor.on("close", async (code) => {
       if (code !== 0) {
         // Cleanup tmp file if ditto failed mid-way
-        try { await fs.promises.unlink(tmpPath); } catch (e) {}
-        return reject(new Error(`ditto exited with code ${code}: ${errorOutput}`));
+        try {
+          await fs.promises.unlink(tmpPath);
+        } catch (e) {}
+        return reject(
+          new Error(`ditto exited with code ${code}: ${errorOutput}`),
+        );
       }
 
       try {
         // Atomic swap
         await fs.promises.rename(tmpPath, src);
-        
-        
+
         const endDiskUsage = await getDiskUsage(src);
         resolve({
           originalSize: originalDiskUsage, // Return absolute physical bytes as the benchmark baseline
           compressedSize: endDiskUsage,
-          mark: endDiskUsage < originalDiskUsage, 
+          mark: endDiskUsage < originalDiskUsage,
           compressed: true,
         });
       } catch (err) {
         // Cleanup if rename fails (e.g. permissions)
-        try { await fs.promises.unlink(tmpPath); } catch (e) {}
+        try {
+          await fs.promises.unlink(tmpPath);
+        } catch (e) {}
         reject(err);
       }
     });

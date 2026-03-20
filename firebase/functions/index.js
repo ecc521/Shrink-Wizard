@@ -27,7 +27,10 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
     // Verify the webhook is actually from our Stripe account
     event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
   } catch (err) {
-    functions.logger.error("Webhook signature verification failed", err.message);
+    functions.logger.error(
+      "Webhook signature verification failed",
+      err.message,
+    );
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -36,24 +39,29 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
     const session = event.data.object;
     const customerEmail = session.customer_details?.email;
     const checkoutId = session.id;
-    
+
     // 1. Generate the base license string
     const licenseKey = generatePasskey();
-    
+
     // 2. Cryptographically sign the license using Ed25519 (Offline Verification)
     // The private key must be safely stored in Google Cloud Secret Manager or Firebase env vars
     let signatureHex = "MOCK_SIGNATURE";
     if (process.env.LICENSE_PRIVATE_KEY) {
-       try {
-         const privateKey = crypto.createPrivateKey({
-           key: Buffer.from(process.env.LICENSE_PRIVATE_KEY, 'base64'),
-           format: 'der',
-           type: 'pkcs8'
-         });
-         signatureHex = crypto.sign(null, Buffer.from(licenseKey), privateKey).toString('hex');
-       } catch (e) {
-         functions.logger.error("Failed to sign license key. Check your env var format.", e);
-       }
+      try {
+        const privateKey = crypto.createPrivateKey({
+          key: Buffer.from(process.env.LICENSE_PRIVATE_KEY, "base64"),
+          format: "der",
+          type: "pkcs8",
+        });
+        signatureHex = crypto
+          .sign(null, Buffer.from(licenseKey), privateKey)
+          .toString("hex");
+      } catch (e) {
+        functions.logger.error(
+          "Failed to sign license key. Check your env var format.",
+          e,
+        );
+      }
     }
 
     // 3. Store in Firestore
@@ -63,14 +71,16 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
       signature: signatureHex,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       stripeCheckoutId: checkoutId,
-      status: "active"
+      status: "active",
     });
 
-    functions.logger.info(`Successfully generated and stored License Key: ${licenseKey} for ${customerEmail}`);
+    functions.logger.info(
+      `Successfully generated and stored License Key: ${licenseKey} for ${customerEmail}`,
+    );
 
-    // TODO: Depending on the merchant setup, integrate Postmark or Firebase Extensions 
+    // TODO: Depending on the merchant setup, integrate Postmark or Firebase Extensions
     // to actually email the generated licenseKey and signatureHex to customerEmail.
   }
 
-  res.json({received: true});
+  res.json({ received: true });
 });

@@ -33,6 +33,7 @@ npm run dist
 ```
 
 ### Code Signing & Notarization (macOS Direct Download)
+
 To package and distribute Shrink Wizard for macOS with the native Root Daemon (`SMAppService`) successfully enabled, the output `.dmg` and `.zip` must be cryptographically signed and Apple Notarized.
 
 `electron-builder` natively handles this during the `npm run dist` command, but you must supply your Apple Developer credentials via environment variables:
@@ -50,14 +51,17 @@ export APPLE_API_ISSUER="YYYYYY"
 # Run the standard build process
 npm run dist
 ```
-*Note: The Mac App Store strictly prohibits root daemons. Do not attempt to submit the `SMAppService` daemon to the App Store, as it will be rejected for violating App Sandbox rules.*
+
+_Note: The Mac App Store strictly prohibits root daemons. Do not attempt to submit the `SMAppService` daemon to the App Store, as it will be rejected for violating App Sandbox rules._
 
 ## Environment Configuration
 
 To develop locally with premium features (Pro Tier unlocking) and data persistence, you must configure the database and Stripe integrations. Create a `.env` file in the root directory and populate it with the following API variables:
 
 ### Database (Firebase)
+
 Used for user authentication and managing "Pro" licenses securely via Firestore.
+
 - `VITE_FIREBASE_API_KEY`: Your Firebase web API key.
 - `VITE_FIREBASE_AUTH_DOMAIN`: Example: `your-project.firebaseapp.com`.
 - `VITE_FIREBASE_PROJECT_ID`: Your Firebase project ID.
@@ -67,34 +71,42 @@ Used for user authentication and managing "Pro" licenses securely via Firestore.
 
 **Deploying Database Rules:**
 Shrink Wizard includes strict Security Rules (`firestore.rules`) out-of-the-box to prevent users from scraping or modifying License Keys. Once you install the Firebase CLI (`npm install -g firebase-tools`) and login (`firebase login`), deploy these rules to your project by running:
+
 ```bash
 firebase deploy --only firestore:rules
 ```
 
 ### Stripe Integration
+
 Used for secure checkout and payment processing.
+
 - `VITE_STRIPE_PUBLIC_KEY`: Your Stripe publishable/public key (starts with `pk_test_` or `pk_live_`).
-- `STRIPE_SECRET_KEY`: Your Stripe secret key. *Warning: Never bundle this into the Electron client directly, keep it in a secure backend or serverless function.*
+- `STRIPE_SECRET_KEY`: Your Stripe secret key. _Warning: Never bundle this into the Electron client directly, keep it in a secure backend or serverless function._
 
 ## Permissions Handling (macOS Daemon)
 
-Shrink Wizard requires administrator privileges strictly to natively compress write-protected system directories via `ditto`. 
-Instead of repeatedly prompting for permissions via `osascript`, the app installs a permanent **Privileged Helper Daemon** via Apple's modern `SMAppService` API. 
+Shrink Wizard requires administrator privileges strictly to natively compress write-protected system directories via `ditto`.
+Instead of repeatedly prompting for permissions via `osascript`, the app installs a permanent **Privileged Helper Daemon** via Apple's modern `SMAppService` API.
 The daemon runs as `root` in the background and is deeply secured against local privilege escalation (LPE) and hijack attempts.
 
 ### IPC Security Architecture
+
 To securely bridge the JavaScript Electron main process to the `root` daemon without building a complex Swift XPC service, we utilize local UNIX Domain Sockets (`/var/run/com.shrinkwizard.sock`) locked down by Native Code Signature Validation:
+
 1. When a connection is made to the socket, a custom C++ Node.js addon (`secure_ipc.node`) intercepts the socket using `getsockopt` with `LOCAL_PEERTOKEN` to retrieve the macOS `audit_token_t`.
 2. The `audit_token_t` is immune to PID-reuse race conditions and securely identifies the connecting process generation.
 3. The addon passes this token to `SecCodeCopyGuestWithAttributes` to evaluate the caller's Code Signature against Shrink Wizard's own `DesignatedRequirement`. If the connecting app is not cryptographically signed by our exact Apple Developer Team ID and Bundle ID, the socket instantly drops the connection.
 
 ### Defense-in-Depth File Operations
+
 Even if the socket were theoretically spoofed, the daemon itself protects the system through strict file-handling mandates:
+
 - **Zero Trust:** The daemon exclusively delegates file manipulation to `ditto`, which naturally preserves the original UNIX ownership and permissions, ensuring unprivileged files remain unprivileged.
 - **Symlink Rejection:** The daemon cleanly averts TOCTOU vulnerabilities by using `lstat` to abort if it detects a symlink instead of a concrete file.
 - **Secure Isolation:** Temp files are staged in `/tmp` inside a randomized directory explicitly locked to `0700` (root-only) permissions, preventing malware from interfering with in-flight assets.
 
 ### Building the Daemon
+
 The Persistent Root Daemon requires compiling both Swift and C++ artifacts during development:
 
 ```bash
@@ -106,19 +118,23 @@ node-gyp build
 # 2. Compile the Swift SMAppService Installer CLI
 swiftc src/main/compression/daemon/HelperInstaller.swift -o build/HelperInstaller
 ```
-*Note: The `electron-builder` configuration in `package.json` automatically packages the generated `HelperInstaller` binary and the `com.shrinkwizard.helper.plist` into the correct App bundle directories (`Contents/MacOS` and `Contents/Library/LaunchDaemons`) so `SMAppService` can successfully register it.*
+
+_Note: The `electron-builder` configuration in `package.json` automatically packages the generated `HelperInstaller` binary and the `com.shrinkwizard.helper.plist` into the correct App bundle directories (`Contents/MacOS` and `Contents/Library/LaunchDaemons`) so `SMAppService` can successfully register it._
 
 ## Binary Dependencies
 
 ### Native Binaries
-For peak performance, Shrink Wizard bundles pre-compiled, native executables safely packaged in the `bin/` directory. 
+
+For peak performance, Shrink Wizard bundles pre-compiled, native executables safely packaged in the `bin/` directory.
+
 - **Image Transcoding:** `jpegtran-mac-arm64` / `jpegtran-win-amd64.exe` (MozJPEG)
 - **JPEG XL Engine:** `cjxl` & `djxl` reference implementations
 - **Apple FS Compression:** Native macOS `ditto` (`--hfsCompression`)
 
-*These binaries are sourced from official upstream releases, package managers, or trusted distributions.*
+_These binaries are sourced from official upstream releases, package managers, or trusted distributions._
 
 ### WebAssembly MozJPEG (Fallback)
+
 If a native binary is unavailable for the host platform, Shrink Wizard executes a pure-WebAssembly version of `jpegtran` powered by V8. The WASM artifact was manually compiled from the MozJPEG C source.
 
 **How to rebuild the WASM artifact (`jpegtran.js` / `jpegtran.wasm`):**
@@ -139,7 +155,9 @@ docker rm extract-container
 ```
 
 ## Metadata Preservation
+
 By default, the application runs `jpegtran` with the `-copy all` flag during lossless compression to strictly preserve all file metadata (ICC profiles, EXIF, XMP, etc.).
 
 ## License
+
 Copyright © Tucker Willenborg

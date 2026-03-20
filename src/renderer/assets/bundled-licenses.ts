@@ -29,7 +29,7 @@ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.`
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.`,
   },
   {
     name: "MozJPEG",
@@ -68,6 +68,6 @@ software".
 
 We specifically permit and encourage the use of this software as the basis of
 commercial products, provided that all warranty or liability claims are
-assumed by the product vendor.`
-  }
+assumed by the product vendor.`,
+  },
 ];

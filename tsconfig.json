@@ -18,7 +18,8 @@
     "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src/renderer", "src/shared"]
+  "include": ["src/renderer", "src/shared", "vitest.setup.ts"]
 }
