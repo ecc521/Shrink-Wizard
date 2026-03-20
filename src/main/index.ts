@@ -236,55 +236,99 @@ app.whenReady().then(() => {
     if (process.platform === 'darwin' && filePaths.some((p: string) => p === '/' || p.startsWith('/Applications') || p.startsWith('/Library') || p.startsWith('/System'))) {
       const net = require('net');
       const { exec } = require('child_process');
-      const socketPath = path.join(os.tmpdir(), `sw-ipc-${Date.now()}-${Math.random().toString(36).substring(2)}.sock`);
+      const globalSocketPath = '/var/run/com.shrinkwizard.sock';
+      const fallbackSocketPath = path.join(os.tmpdir(), `sw-ipc-${Date.now()}-${Math.random().toString(36).substring(2)}.sock`);
       
+      let useGlobalSocket = false;
       try {
-        await new Promise<void>((resolve, reject) => {
-          rootServer = net.createServer((socket: any) => {
-            rootSocket = socket;
-            let buffer = '';
-            socket.on('data', (data: Buffer) => {
-              buffer += data.toString();
-              let newlineIdx;
-              while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
-                const msgStr = buffer.slice(0, newlineIdx);
-                buffer = buffer.slice(newlineIdx + 1);
-                if (!msgStr.trim()) continue;
-                try {
-                  const msg = JSON.parse(msgStr);
-                  if (msg.type === 'ready') resolve();
-                  else if (msg.type === 'result' || msg.type === 'error') {
-                    const p = workerPromises.get(msg.id);
-                    if (p) {
-                      if (msg.type === 'result') p.resolve(msg.result);
-                      else p.reject(new Error(msg.error));
-                      workerPromises.delete(msg.id);
-                    }
-                  }
-                } catch (e) {}
-              }
-            });
-          });
+        await fs.promises.access(globalSocketPath, fs.constants.W_OK);
+        useGlobalSocket = true;
+      } catch (e) {}
 
-          rootServer.listen(socketPath, () => {
-            const isPackaged = app.isPackaged;
-            const workerPath = isPackaged 
-              ? path.join(process.resourcesPath, 'app.asar/dist-electron/main/compression/sudo-worker.cjs')
-              : path.join(__dirname, 'compression', 'sudo-worker.cjs');
-              
-            const cmd = `osascript -e 'do shell script "ELECTRON_RUN_AS_NODE=1 \\"${process.execPath}\\" \\"${workerPath}\\" \\"${socketPath}\\"" with administrator privileges'`;
-            exec(cmd, (err: any) => {
-              if (err) {
-                rootServer?.close();
-                sudoFailed = true;
-                updateProgress();
-                resolve(); // Don't crash, just proceed without elevation if they cancel
+      // Shared parser for both socket modes
+      const handleSocketData = (socket: any) => {
+        let buffer = '';
+        socket.on('data', (data: Buffer) => {
+          buffer += data.toString();
+          let newlineIdx;
+          while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
+            const msgStr = buffer.slice(0, newlineIdx);
+            buffer = buffer.slice(newlineIdx + 1);
+            if (!msgStr.trim()) continue;
+            try {
+              const msg = JSON.parse(msgStr);
+              if (msg.type === 'result' || msg.type === 'error') {
+                const p = workerPromises.get(msg.id);
+                if (p) {
+                  if (msg.type === 'result') p.resolve(msg.result);
+                  else p.reject(new Error(msg.error));
+                  workerPromises.delete(msg.id);
+                }
               }
+            } catch (e) {}
+          }
+        });
+      };
+
+      try {
+        if (useGlobalSocket) {
+          await new Promise<void>((resolve, reject) => {
+            rootSocket = net.createConnection(globalSocketPath, () => {
+              handleSocketData(rootSocket);
+              resolve();
+            });
+            rootSocket.on('error', (err: any) => {
+              console.error("Failed to connect to global daemon:", err);
+              reject(err);
             });
           });
-        });
+        } else {
+          await new Promise<void>((resolve, reject) => {
+            rootServer = net.createServer((socket: any) => {
+              rootSocket = socket;
+              let innerBuffer = '';
+              socket.on('data', (data: Buffer) => {
+                // Wait for the {type: 'ready'} from the legacy worker before attaching the main parser
+                if (!rootSocket.isReady) {
+                    innerBuffer += data.toString();
+                    let newlineIdx = innerBuffer.indexOf('\n');
+                    if (newlineIdx !== -1) {
+                        const msgStr = innerBuffer.slice(0, newlineIdx);
+                        try {
+                            if (JSON.parse(msgStr).type === 'ready') {
+                                rootSocket.isReady = true;
+                                handleSocketData(rootSocket);
+                                // Re-emit any remaining buffer to the new handler
+                                const remaining = innerBuffer.slice(newlineIdx + 1);
+                                if (remaining) rootSocket.emit('data', Buffer.from(remaining));
+                                resolve();
+                            }
+                        } catch(e) {}
+                    }
+                }
+              });
+            });
+
+            rootServer.listen(fallbackSocketPath, () => {
+              const isPackaged = app.isPackaged;
+              const workerPath = isPackaged 
+                ? path.join(process.resourcesPath, 'app.asar/dist-electron/main/compression/sudo-worker.cjs')
+                : path.join(__dirname, 'compression', 'sudo-worker.cjs');
+                
+              const cmd = `osascript -e 'do shell script "ELECTRON_RUN_AS_NODE=1 \\"${process.execPath}\\" \\"${workerPath}\\" \\"${fallbackSocketPath}\\"" with administrator privileges'`;
+              exec(cmd, (err: any) => {
+                if (err) {
+                  rootServer?.close();
+                  sudoFailed = true;
+                  updateProgress();
+                  resolve(); // Don't crash, just proceed without elevation if they cancel
+                }
+              });
+            });
+          });
+        }
       } catch (e) {
-        console.error("Failed to launch root worker:", e);
+        console.error("Failed to launch or connect root worker:", e);
       }
     }
 

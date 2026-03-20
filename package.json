@@ -110,6 +110,16 @@
             "extraResources": [
                 "bin/*darwin*"
             ],
+            "extraFiles": [
+                {
+                    "from": "build/com.shrinkwizard.helper.plist",
+                    "to": "Library/LaunchDaemons/com.shrinkwizard.helper.plist"
+                },
+                {
+                    "from": "build/HelperInstaller",
+                    "to": "MacOS/HelperInstaller"
+                }
+            ],
             "category": "public.app-category.utilities",
             "darkModeSupport": true,
             "type": "distribution",
@@ -160,6 +170,7 @@
         "framer-motion": "^12.38.0",
         "image-size": "^2.0.2",
         "lucide-react": "^0.577.0",
+        "node-addon-api": "^8.6.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"
     }
