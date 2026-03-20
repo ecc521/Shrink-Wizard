@@ -69,6 +69,7 @@ type TTab = 'compress' | 'decompress' | 'settings' | 'about' | 'store' | 'scanne
 export default function App() {
   const [activeTab, setActiveTab] = useState<TTab>('scanner');
   const [isGlobalProcessing, setIsGlobalProcessing] = useState(false);
+  const [globalSavingsMB, setGlobalSavingsMB] = useState(0);
   const [platform, setPlatform] = useState<string>('unknown');
 
   // CompactOS State
@@ -128,6 +129,9 @@ export default function App() {
       window.electron.getProStatus().then((status: boolean) => {
         setIsPro(status);
       });
+      window.electron.getGlobalSavingsMB?.().then((savings: number) => {
+        if (savings !== undefined) setGlobalSavingsMB(savings);
+      }).catch((e: any) => console.log('global savings fetch failed', e));
       window.electron.isAdmin().then((status: boolean) => {
         setIsAdminUser(status);
       });
@@ -228,6 +232,35 @@ export default function App() {
 
           <div style={{ flex: 1 }} /> {/* Spacer */}
 
+          <div className="usage-tracker">
+            {isPro ? (
+              <>
+                <div className="tracker-header">
+                  <span className="tracker-title">Pro Active</span>
+                  <Sparkles size={14} className="tracker-icon" style={{ color: 'var(--success)' }} />
+                </div>
+                <div className="tracker-value">{formatBytes(globalSavingsMB, false)}</div>
+                <div className="tracker-label">Total Space Reclaimed</div>
+              </>
+            ) : (
+              <>
+                <div className="tracker-header">
+                  <span className="tracker-title">Free Tier</span>
+                  <span className="tracker-limit">{formatBytes(globalSavingsMB, false)} / 5.00 GB</span>
+                </div>
+                <div className="tracker-bar-bg">
+                  <motion.div 
+                    className="tracker-bar-fill"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, (globalSavingsMB / 5000) * 100)}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                </div>
+                <div className="tracker-label">Total Space Reclaimed</div>
+              </>
+            )}
+          </div>
+
           <button
             className={`nav-btn ${activeTab === 'store' ? 'active' : ''}`}
             onClick={() => handleNavClick('store')}
@@ -323,6 +356,7 @@ export default function App() {
                 setAutoStartCompression={setAutoStartCompression}
                 isAdminUser={isAdminUser}
                 onProcessingChange={setIsGlobalProcessing}
+                onSavingsUpdate={setGlobalSavingsMB}
               />
             </motion.div>
           ) : activeTab === 'scanner' ? (
@@ -447,6 +481,62 @@ export default function App() {
           flex-direction: column;
           overflow: hidden;
           background-color: var(--bg-secondary);
+        }
+
+        .usage-tracker {
+          background-color: var(--bg-secondary);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-md);
+          padding: 14px;
+          margin-bottom: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          -webkit-app-region: no-drag;
+        }
+
+        .tracker-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .tracker-title {
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+
+        .tracker-limit {
+          font-size: 11px;
+          font-weight: 500;
+          color: var(--text-secondary);
+        }
+
+        .tracker-value {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--accent-primary);
+          margin-top: 2px;
+        }
+
+        .tracker-bar-bg {
+          width: 100%;
+          height: 6px;
+          background-color: var(--bg-tertiary);
+          border-radius: 3px;
+          overflow: hidden;
+        }
+
+        .tracker-bar-fill {
+          height: 100%;
+          background: var(--accent-primary);
+          border-radius: 3px;
+        }
+
+        .tracker-label {
+          font-size: 11px;
+          color: var(--text-secondary);
         }
 
         .queue-siderail {
@@ -729,7 +819,8 @@ function CompressionView({
   autoStartCompression,
   setAutoStartCompression,
   isAdminUser,
-  onProcessingChange
+  onProcessingChange,
+  onSavingsUpdate
 }: {
   activeTab: 'compress' | 'decompress',
   outputFormat: string,
@@ -743,7 +834,8 @@ function CompressionView({
   autoStartCompression?: boolean,
   setAutoStartCompression?: (val: boolean) => void,
   isAdminUser?: boolean,
-  onProcessingChange: (processing: boolean) => void
+  onProcessingChange: (processing: boolean) => void,
+  onSavingsUpdate?: (mb: number) => void
 }) {
   const [activeQueue, setActiveQueue] = useState<QueueJob[]>([]);
   const [isPaused, setIsPaused] = useState(false);
@@ -817,7 +909,10 @@ function CompressionView({
 
   useEffect(() => {
     if (window.electron) {
-      window.electron.getGlobalSavingsMB().then((val: number) => setGlobalSavingsMB(val));
+      window.electron.getGlobalSavingsMB().then((val: number) => {
+        setGlobalSavingsMB(val);
+        onSavingsUpdate?.(val);
+      });
 
       window.electron.onProgress((data: any) => {
         if (data.globalSavingsMB !== undefined) {
@@ -933,7 +1028,13 @@ function CompressionView({
       }
 
       if (window.electron) window.electron.removeProgressListeners();
-      window.electron.onProgress((data: ProgressData) => {
+      window.electron.onProgress((data: any) => {
+        if (data.globalSavingsMB !== undefined) {
+          setGlobalSavingsMB(data.globalSavingsMB);
+          onSavingsUpdate?.(data.globalSavingsMB);
+        }
+        if (data.sudoFailed) setSudoFailed(true);
+        if (data.outOfSpace) setOutOfSpace(true);
         setActiveQueue(prev => prev.map(j => j.id === nextJob!.id ? { ...j, progressData: data } : j));
       });
 
