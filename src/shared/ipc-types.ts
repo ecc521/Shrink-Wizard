@@ -40,6 +40,43 @@ export interface ProgressData {
   sudoFailed?: boolean;
   outOfSpace?: boolean;
   skippedSystemFiles?: boolean;
+  globalSavingsMB?: number;
+  path?: string;
+  imageMaxSavingsMB?: number;
+  fileMaxSavingsMB?: number;
+}
+
+// The shape for processPaths options
+export interface ProcessOptions {
+  imageCompressionEnabled?: boolean;
+  outputFormat?: "jxl" | "jpeg" | "original";
+  effort?: number;
+  nativeAlgo?:
+    | "automatic"
+    | "lzvn"
+    | "lzfse"
+    | "zlib"
+    | "off"
+    | "none"
+    | "LZX"
+    | "XPRESS16K"
+    | "XPRESS8K"
+    | "XPRESS4K";
+  clearCache?: boolean;
+  isPro?: boolean;
+  expectedTotalBytes?: number;
+  expectedTotalFiles?: number;
+}
+
+// The shape for scanSystem results array
+export interface ScanResult {
+  path: string;
+  originalMB: number;
+  currentSettingsSavingsMB: number;
+  maxSettingsSavingsMB: number;
+  fileCount: number;
+  imageMaxSavingsMB?: number;
+  fileMaxSavingsMB?: number;
 }
 
 /**
@@ -59,17 +96,17 @@ export interface ElectronAPI {
 
   // Image specific
   compressJpeg: (filePath: string) => Promise<JpegCompressResult>;
-  compressJpegToJxl: (
+  compressImageToJxl: (
     filePath: string,
     destPath?: string,
   ) => Promise<{ originalSize: number; compressedSize: number; mark: boolean }>;
-  restoreJxlToJpeg: (filePath: string, destPath?: string) => Promise<void>;
+  restoreJxlToImage: (filePath: string, destPath?: string) => Promise<void>;
 
   // Unified recursive processing
   processPaths: (
     filePaths: string[],
     mode: "compress" | "restore",
-    options: any,
+    options: ProcessOptions,
   ) => Promise<CompressionStats>;
   getPathForFile: (file: File) => string;
 
@@ -85,18 +122,22 @@ export interface ElectronAPI {
   getProStatus: () => Promise<boolean>;
   verifyLicense: (key: string) => Promise<boolean>;
   isAdmin: () => Promise<boolean>;
-  getGlobalSavingsMB: () => Promise<number>;
+  getGlobalSavingsMB: () => Promise<{
+    globalSavingsMB: number;
+    dailySavingsMB: number;
+    hasSeenTrialEnd: boolean;
+  }>;
 
   // Scanner API
   scanSystem: (
     paths: string[],
-    options: any,
-  ) => Promise<{ results: any[]; skippedCount: number }>;
+    options: ProcessOptions,
+  ) => Promise<{ results: ScanResult[]; skippedCount: number }>;
   onScanUpdate: (
-    callback: (data: { results: any[]; skippedCount: number }) => void,
+    callback: (data: { results: ScanResult[]; skippedCount: number }) => void,
   ) => void;
   removeScanUpdateListeners: () => void;
-  onScanProgress: (callback: (data: any) => void) => void;
+  onScanProgress: (callback: (data: ProgressData) => void) => void;
   removeScanProgressListeners: () => void;
   abortScan: () => Promise<void>;
   abortProcess: () => Promise<void>;
@@ -105,7 +146,7 @@ export interface ElectronAPI {
   onProgress: (callback: (data: ProgressData) => void) => void;
   removeProgressListeners: () => void;
 
-  onLimitReached: (callback: () => void) => void;
+  onLimitReached: (callback: (limitType: "trial" | "daily") => void) => void;
   removeLimitReachedListeners: () => void;
   togglePause: (paused: boolean) => Promise<void>;
 }

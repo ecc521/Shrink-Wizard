@@ -16,16 +16,18 @@ type TTab =
   | "compress"
   | "decompress"
   | "system"
-  | "settings"
   | "about"
   | "store"
-  | "scanner";
+  | "scanner"
+  | "settings";
 
 export function Sidebar({
   activeTab,
   isGlobalProcessing,
   isPro,
   globalSavingsMB,
+  dailySavingsMB,
+  hasSeenTrialEnd,
   platform,
   handleNavClick,
 }: {
@@ -33,6 +35,8 @@ export function Sidebar({
   isGlobalProcessing: boolean;
   isPro: boolean;
   globalSavingsMB: number;
+  dailySavingsMB: number;
+  hasSeenTrialEnd: boolean;
   platform: string;
   handleNavClick: (tab: TTab) => void;
 }) {
@@ -102,6 +106,7 @@ export function Sidebar({
             <span>System Data</span>
           </button>
         )}
+
         <button
           className={`nav-btn ${activeTab === "settings" ? "active" : ""}`}
           onClick={() => handleNavClick("settings")}
@@ -116,66 +121,7 @@ export function Sidebar({
           <Settings size={20} />
           <span>Settings</span>
         </button>
-        <div style={{ flex: 1 }} /> {/* Spacer */}
-        <div className="usage-tracker">
-          {isPro ? (
-            <>
-              <div className="tracker-header">
-                <span className="tracker-title">Pro Active</span>
-                <Sparkles
-                  size={14}
-                  className="tracker-icon"
-                  style={{ color: "var(--success)" }}
-                />
-              </div>
-              <div className="tracker-value">
-                {formatBytes(globalSavingsMB, false)}
-              </div>
-              <div className="tracker-label">Total Space Reclaimed</div>
-            </>
-          ) : (
-            <>
-              <div className="tracker-header">
-                <span className="tracker-title">Free Tier</span>
-                <span className="tracker-limit">
-                  {formatBytes(globalSavingsMB, false)} / 5.00 GB
-                </span>
-              </div>
-              <div className="tracker-bar-bg">
-                <motion.div
-                  className="tracker-bar-fill"
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${Math.min(100, (globalSavingsMB / 5000) * 100)}%`,
-                  }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                />
-              </div>
-              <div className="tracker-label">Total Space Reclaimed</div>
-            </>
-          )}
-        </div>
-        <button
-          className={`nav-btn ${activeTab === "store" ? "active" : ""}`}
-          onClick={() => handleNavClick("store")}
-          style={{
-            color: isPro ? "var(--success)" : "var(--accent-primary)",
-            background:
-              activeTab === "store"
-                ? "var(--bg-secondary)"
-                : isPro
-                  ? "rgba(16, 185, 129, 0.1)"
-                  : "rgba(99, 102, 241, 0.1)",
-            opacity: isGlobalProcessing && activeTab !== "store" ? 0.5 : 1,
-            cursor:
-              isGlobalProcessing && activeTab !== "store"
-                ? "not-allowed"
-                : "pointer",
-          }}
-        >
-          {isPro ? <CheckCircle size={20} /> : <Zap size={20} />}
-          <span>{isPro ? "Pro Active" : "Upgrade to Pro"}</span>
-        </button>
+
         <button
           className={`nav-btn ${activeTab === "about" ? "active" : ""}`}
           onClick={() => handleNavClick("about")}
@@ -190,6 +136,107 @@ export function Sidebar({
           <Info size={20} />
           <span>About</span>
         </button>
+
+        <div
+          className="usage-tracker"
+          onClick={() => {
+            if (!isGlobalProcessing || activeTab === "store") {
+              handleNavClick("store");
+            }
+          }}
+          style={{
+            marginTop: "auto",
+            cursor:
+              isGlobalProcessing && activeTab !== "store"
+                ? "not-allowed"
+                : "pointer",
+            opacity: isGlobalProcessing && activeTab !== "store" ? 0.5 : 1,
+            border:
+              activeTab === "store"
+                ? isPro
+                  ? "1px solid var(--success)"
+                  : "1px solid var(--accent-primary)"
+                : "1px solid var(--border)",
+            background:
+              activeTab === "store"
+                ? isPro
+                  ? "rgba(16, 185, 129, 0.05)"
+                  : "rgba(99, 102, 241, 0.05)"
+                : "var(--bg-secondary)",
+            transition: "all 0.2s ease",
+            marginBottom: 0,
+          }}
+        >
+          {isPro ? (
+            <>
+              <div className="tracker-header">
+                <span
+                  className="tracker-title"
+                  style={{ color: "var(--accent-primary)" }}
+                >
+                  Premium
+                </span>
+                <span
+                  className="tracker-limit"
+                  style={{ color: "var(--accent-primary)" }}
+                >
+                  {formatBytes(dailySavingsMB, false)} / Unlimited
+                </span>
+              </div>
+              <div className="tracker-label">
+                Total Saved:{" "}
+                <strong style={{ color: "var(--text-primary)" }}>
+                  {formatBytes(globalSavingsMB, false)}
+                </strong>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="tracker-header">
+                <span className="tracker-title">
+                  {!hasSeenTrialEnd ? "Free Trial" : "Free Tier"}
+                </span>
+                <span className="tracker-limit">
+                  {!hasSeenTrialEnd
+                    ? `${formatBytes(globalSavingsMB, false)} / 3.00 GB`
+                    : `${formatBytes(dailySavingsMB, false)} / 1.00 GB`}
+                </span>
+              </div>
+              <div className="tracker-bar-bg">
+                <motion.div
+                  className="tracker-bar-fill"
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: !hasSeenTrialEnd
+                      ? `${Math.min(100, (globalSavingsMB / 3000) * 100)}%`
+                      : `${Math.min(100, (dailySavingsMB / 1000) * 100)}%`,
+                  }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                />
+              </div>
+              <div className="tracker-label">
+                Total Saved:{" "}
+                <strong style={{ color: "var(--text-primary)" }}>
+                  {formatBytes(globalSavingsMB, false)}
+                </strong>
+              </div>
+              <div
+                style={{
+                  marginTop: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  color: "var(--accent-primary)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                }}
+              >
+                <Zap size={14} />
+                <span>Upgrade to Pro</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </nav>
   );

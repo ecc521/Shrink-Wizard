@@ -1,26 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  HardDrive,
-  Settings,
-  Search,
-  CheckCircle,
-  AlertTriangle,
-  ChevronRight,
-  X,
-  File,
-  Zap,
-  Info,
-  ArrowUpDown,
-  ChevronDown,
-  Sparkles,
-} from "lucide-react";
-import {
-  formatPath,
-  formatBytes,
-  formatCompactNumber,
-} from "../utils/formatters";
-import type { QueueJob } from "../App";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { CheckCircle } from "lucide-react";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../firebase";
 
@@ -50,7 +30,7 @@ export function StoreView({
         licenseKey: licenseKey.trim(),
         machineId,
       });
-      const data = result.data as any;
+      const data = result.data as { success: boolean; message?: string };
 
       if (data.success) {
         const valid = await window.electron.verifyLicense("PRO_TEST");
@@ -58,8 +38,9 @@ export function StoreView({
       } else {
         alert("Activation failed: " + (data.message || "Invalid Key"));
       }
-    } catch (err: any) {
-      alert("Verification Failed: " + (err.message || err));
+    } catch (err) {
+      const error = err as Error;
+      alert("Verification Failed: " + (error.message || error));
     } finally {
       setActivating(false);
     }
@@ -158,9 +139,8 @@ export function StoreView({
                   lineHeight: "1.6",
                 }}
               >
-                The Free tier gives you 5GB of space savings. After that,
-                compression is locked to a single CPU thread. Upgrading to Pro
-                unlocks:
+                The Free tier gives you a 3GB Free Trial, followed by a 1GB
+                daily quota. Upgrading to Pro unlocks:
               </p>
               <ul
                 style={{
@@ -174,12 +154,9 @@ export function StoreView({
                 }}
               >
                 <li>
-                  <strong>Full Speed Processing:</strong> Utilize 100% of your
-                  CPU cores for massive file batches.
-                </li>
-                <li>
-                  <strong>Unlimited Savings:</strong> Compress hundreds of
-                  Gigabytes with absolutely no throttling.
+                  <strong>Unlimited Savings:</strong> Bypass the daily limits
+                  and compress hundreds of Gigabytes with absolutely no
+                  throttling.
                 </li>
                 <li>
                   <strong>Archival JPEG XL:</strong> Access the next-generation

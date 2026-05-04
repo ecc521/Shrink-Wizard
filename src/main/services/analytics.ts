@@ -14,7 +14,7 @@ const API_SECRET = "RTMX1FAqTl2Ne86OOD6yKg";
 export async function trackEvent(
   clientId: string,
   eventName: string,
-  params: Record<string, any> = {},
+  params: Record<string, unknown> = {},
 ) {
   if (!clientId) {
     return;

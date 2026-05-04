@@ -10,12 +10,13 @@ export default defineConfig({
     outDir: "dist",
   },
   server: {
-    port: 5173,
+    port: 5174,
     strictPort: true,
   },
   test: {
     globals: true,
     environment: "jsdom",
     setupFiles: "./vitest.setup.ts",
+    exclude: ["node_modules", "dist", "dist-electron"],
   },
 });

@@ -51,7 +51,7 @@ export function EulaModal({
                 hardware failures) can occur.
               </p>
               <p>
-                By clicking "I Agree", you also accept our standard{" "}
+                By clicking &quot;I Agree&quot;, you also accept our standard{" "}
                 <a
                   href="#"
                   onClick={(e) => {

@@ -1,7 +1,7 @@
-import * as os from "os";
-import { spawn } from "child_process";
-import path from "path";
-import fs from "fs";
+import * as os from "node:os";
+import { spawn } from "node:child_process";
+import path from "node:path";
+import fs from "node:fs";
 import { app } from "electron";
 
 function getBasePath(): string {
@@ -58,8 +58,10 @@ async function runJpegtran(
     const proc = spawn(binaryExec, args, { stdio: ["ignore", "pipe", "pipe"] });
     if (proc.pid) {
       try {
-        os.setPriority(proc.pid, os.constants.priority.PRIORITY_LOW);
-      } catch (e) {}
+        os.setPriority(proc.pid, os.constants.priority.PRIORITY_BELOW_NORMAL);
+      } catch {
+        /* ignore */
+      }
     }
     proc.stdout.on("data", (data: Buffer) => buffers.push(data));
 

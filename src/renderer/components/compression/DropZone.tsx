@@ -1,11 +1,18 @@
 import React from "react";
 import { Upload } from "lucide-react";
+import { QueueJob } from "../../../shared/ipc-types";
 
 export function DropZone({
   isDragActive,
   activeQueue,
   handleSelectFiles,
-}: any) {
+  isCompress,
+}: {
+  isDragActive: boolean;
+  activeQueue: QueueJob[];
+  handleSelectFiles: (selectFiles: boolean) => void;
+  isCompress: boolean;
+}) {
   return (
     <>
       <div
@@ -86,7 +93,7 @@ export function DropZone({
                 cursor: "not-allowed",
               }}
             >
-              Start Processing
+              {isCompress ? "Shrink!" : "Decompress!"}
             </button>
           </div>
         </div>

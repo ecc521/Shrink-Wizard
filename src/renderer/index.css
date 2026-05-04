@@ -171,6 +171,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
 }
 
 .nav-btn {
@@ -208,6 +209,14 @@ button {
   background-color: var(--bg-secondary);
 }
 
+.main-drag-handle {
+  height: 40px;
+  width: 100%;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
 .usage-tracker {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -217,7 +226,13 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: var(--transition);
   -webkit-app-region: no-drag;
+}
+
+.usage-tracker:hover {
+  border-color: var(--accent-primary);
+  background-color: rgba(99, 102, 241, 0.05);
 }
 
 .tracker-header {
@@ -308,7 +323,7 @@ button {
 
 /* View styles */
 .view-container {
-  padding: 30px 40px;
+  padding: 0 40px 30px 40px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -532,4 +547,37 @@ button {
 .btn-secondary:hover {
   color: var(--text-primary);
   background-color: var(--border-light);
+}
+
+.compression-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 0 1 260px;
+  min-width: 220px;
+}
+
+/* When the window is narrow, the layout stacks and we want controls to be side-by-side */
+@media (max-width: 1050px) {
+  .compression-right-column {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+  }
+
+  .compression-right-column > * {
+    flex: 1 1 140px !important;
+    min-width: 140px !important;
+    overflow: hidden;
+  }
+}
+
+/* Responsive adjustments for narrow viewports */
+@media (max-width: 800px) {
+  :root {
+    --queue-max-height: 250px;
+    --main-padding: 16px;
+  }
 }

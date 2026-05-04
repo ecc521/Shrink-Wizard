@@ -131,4 +131,5 @@ newAppBody = newAppBody.replace(
 );
 
 fs.writeFileSync("src/renderer/App.tsx", newAppBody);
+// eslint-disable-next-line no-console
 console.log("App.tsx successfully decomposed using precise offsets!");

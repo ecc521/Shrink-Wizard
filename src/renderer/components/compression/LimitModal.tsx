@@ -1,12 +1,18 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
 
 export function LimitModal({
   showLimitModal,
   setShowLimitModal,
   setIsPaused,
-}: any) {
+  limitType = "trial",
+}: {
+  showLimitModal: boolean;
+  setShowLimitModal: (show: boolean) => void;
+  setIsPaused: (paused: boolean) => void;
+  limitType?: "trial" | "daily";
+}) {
   return (
     <AnimatePresence>
       {showLimitModal && (
@@ -23,41 +29,63 @@ export function LimitModal({
             exit={{ y: -20, opacity: 0 }}
             style={{
               maxWidth: "480px",
-              borderLeft: "4px solid var(--warning)",
+              borderLeft:
+                limitType === "trial"
+                  ? "4px solid var(--accent-primary)"
+                  : "4px solid var(--warning)",
             }}
           >
             <h2
               className="eula-title"
               style={{ display: "flex", alignItems: "center", gap: "12px" }}
             >
-              <AlertTriangle className="text-warning" /> 5GB Limit Reached
+              {limitType === "trial" ? (
+                <>
+                  <Info className="text-primary" /> Premium Trial Complete
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="text-warning" /> Daily Limit Reached
+                </>
+              )}
             </h2>
             <div className="eula-content">
-              <p>
-                You have successfully saved over <strong>5GB</strong> of
-                absolute disk space using Shrink Wizard!
-              </p>
-              <p>
-                As an independent developer, I offer this tool for free to help
-                everyone reclaim their storage. To keep the project sustainable,
-                compression speed is now dynamically throttled to{" "}
-                <strong>1 background thread.</strong>
-              </p>
+              {limitType === "trial" ? (
+                <>
+                  <p>
+                    You have successfully saved over <strong>3GB</strong> of
+                    space using Shrink Wizard! Your premium trial is now
+                    complete.
+                  </p>
+                  <p>How would you like to continue?</p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    You have successfully saved <strong>1GB</strong> of space
+                    today!
+                  </p>
+                  <p>
+                    You've hit your daily limit on the Free Tier. Please wait
+                    until tomorrow to process more files, or upgrade for
+                    unlimited access.
+                  </p>
+                </>
+              )}
               <p>
                 <em>
-                  Note: Decompressing/Restoring files is completely separate,
-                  always highly-concurrent, and effectively free forever.
+                  Note: Decompressing/Restoring files is always completely free
+                  and unlimited.
                 </em>
-              </p>
-              <p>
-                If you want to unthrottle and process large nested folders
-                immediately at full native multi-core speed (as well as access
-                our JXL transcoding features), please consider upgrading.
               </p>
             </div>
             <div
               className="eula-footer"
-              style={{ flexDirection: "column", marginTop: "24px" }}
+              style={{
+                flexDirection: "column",
+                marginTop: "24px",
+                gap: "12px",
+              }}
             >
               <button
                 className="btn btn-primary"
@@ -67,24 +95,42 @@ export function LimitModal({
                 }}
                 style={{ width: "100%", padding: "12px" }}
               >
-                View Pro Settings ($10)
+                Upgrade to Unlimited
               </button>
-              <button
-                className="btn"
-                onClick={() => {
-                  setShowLimitModal(false);
-                  setIsPaused(false);
-                  window.electron.togglePause(false);
-                }}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  background: "transparent",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                Continue Slower
-              </button>
+
+              {limitType === "trial" ? (
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setShowLimitModal(false);
+                    setIsPaused(false);
+                    window.electron.togglePause(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: "transparent",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  Continue with 1GB Daily Limit
+                </button>
+              ) : (
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setShowLimitModal(false);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: "transparent",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  Close
+                </button>
+              )}
             </div>
           </motion.div>
         </motion.div>

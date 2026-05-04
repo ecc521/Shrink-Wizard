@@ -1,26 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  HardDrive,
-  Settings,
-  Search,
-  CheckCircle,
-  AlertTriangle,
-  ChevronRight,
-  X,
-  File,
-  Zap,
-  Info,
-  ArrowUpDown,
-  ChevronDown,
-  Sparkles,
-} from "lucide-react";
-import {
-  formatPath,
-  formatBytes,
-  formatCompactNumber,
-} from "../utils/formatters";
-import type { QueueJob } from "../App";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import npmLicenses from "../assets/npm-licenses.json";
 import { bundledLicenses } from "../assets/bundled-licenses";
 
@@ -33,12 +13,6 @@ export function AboutView({ platform }: { platform: string }) {
 
   const toggleLicense = (name: string) => {
     setExpandedLicenses((prev) => ({ ...prev, [name]: !prev[name] }));
-  };
-
-  const handleViewLicenses = async () => {
-    if (window.electron) {
-      await window.electron.openLicenses();
-    }
   };
 
   useEffect(() => {
@@ -240,103 +214,110 @@ export function AboutView({ platform }: { platform: string }) {
           >
             NPM Dependencies
           </h2>
-          {Object.entries(npmLicenses).map(
-            ([pkgName, details]: [string, any]) => (
+          {Object.entries(
+            npmLicenses as Record<
+              string,
+              {
+                licenses: string | string[];
+                repository?: string | { url: string };
+                publisher?: string;
+              }
+            >,
+          ).map(([pkgName, details]) => (
+            <div
+              key={pkgName}
+              className="settings-card"
+              style={{
+                padding: "16px",
+                marginBottom: "12px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+              }}
+            >
               <div
-                key={pkgName}
-                className="settings-card"
                 style={{
-                  padding: "16px",
-                  marginBottom: "12px",
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
                 }}
               >
-                <div
+                <h3
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
+                    color: "var(--text-primary)",
+                    margin: 0,
+                    fontSize: "14px",
+                    wordBreak: "break-all",
+                    paddingRight: "12px",
                   }}
                 >
-                  <h3
-                    style={{
-                      color: "var(--text-primary)",
-                      margin: 0,
-                      fontSize: "14px",
-                      wordBreak: "break-all",
-                      paddingRight: "12px",
-                    }}
-                  >
-                    {pkgName}
-                  </h3>
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      fontSize: "11px",
-                      color: "var(--text-secondary)",
-                      background: "var(--bg-secondary)",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    {typeof details.licenses === "string"
-                      ? details.licenses
-                      : Array.isArray(details.licenses)
-                        ? details.licenses.join(", ")
-                        : "Unknown"}
-                  </span>
-                </div>
-                <div
+                  {pkgName}
+                </h3>
+                <span
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "4px",
+                    flexShrink: 0,
+                    fontSize: "11px",
+                    color: "var(--text-secondary)",
+                    background: "var(--bg-secondary)",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
                   }}
                 >
-                  {details.repository && (
-                    <p
-                      style={{
-                        fontSize: "12px",
-                        color: "var(--text-secondary)",
-                        margin: 0,
-                        wordBreak: "break-all",
-                      }}
-                    >
-                      Repository:{" "}
-                      <a
-                        href={
-                          typeof details.repository === "string"
-                            ? details.repository
-                            : details.repository.url
-                        }
-                        style={{
-                          color: "var(--accent-primary)",
-                          textDecoration: "none",
-                        }}
-                      >
-                        {typeof details.repository === "string"
-                          ? details.repository
-                          : details.repository.url}
-                      </a>
-                    </p>
-                  )}
-                  {details.publisher && (
-                    <p
-                      style={{
-                        fontSize: "12px",
-                        color: "var(--text-secondary)",
-                        margin: 0,
-                      }}
-                    >
-                      Publisher: {details.publisher}
-                    </p>
-                  )}
-                </div>
+                  {typeof details.licenses === "string"
+                    ? details.licenses
+                    : Array.isArray(details.licenses)
+                      ? details.licenses.join(", ")
+                      : "Unknown"}
+                </span>
               </div>
-            ),
-          )}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                {details.repository && (
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--text-secondary)",
+                      margin: 0,
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    Repository:{" "}
+                    <a
+                      href={
+                        typeof details.repository === "string"
+                          ? details.repository
+                          : details.repository.url
+                      }
+                      style={{
+                        color: "var(--accent-primary)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {typeof details.repository === "string"
+                        ? details.repository
+                        : details.repository.url}
+                    </a>
+                  </p>
+                )}
+                {details.publisher && (
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--text-secondary)",
+                      margin: 0,
+                    }}
+                  >
+                    Publisher: {details.publisher}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </motion.div>
     );

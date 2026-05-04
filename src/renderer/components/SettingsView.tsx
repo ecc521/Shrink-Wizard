@@ -37,6 +37,7 @@ export function SettingsView({
   jxlEffort,
   setJxlEffort,
   isPro,
+  setIsPro,
 }: {
   platform: string;
   theme: string;
@@ -52,6 +53,7 @@ export function SettingsView({
   jxlEffort: number;
   setJxlEffort: (v: number) => void;
   isPro: boolean;
+  setIsPro?: (v: boolean) => void;
 }) {
   const getAlgoDescription = () => {
     switch (nativeAlgo) {
@@ -232,8 +234,6 @@ export function SettingsView({
           </div>
         </div>
       </div>
-
- 
 
       <div className="settings-card">
         <div
@@ -422,6 +422,47 @@ export function SettingsView({
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* Developer Settings */}
+      <div className="settings-card">
+        <div
+          className="settings-card-header"
+          style={{ alignItems: "flex-start" }}
+        >
+          <div style={{ flex: 1 }}>
+            <h2 className="settings-card-title">Developer Tools</h2>
+            <p
+              style={{
+                color: "var(--text-secondary)",
+                fontSize: "14px",
+                marginTop: "4px",
+                maxWidth: "80%",
+              }}
+            >
+              Toggle local Pro mode UI state without hitting activation servers.
+            </p>
+          </div>
+          <button
+            className="btn btn-outline"
+            onClick={async () => {
+              const newState =
+                await window.electron.verifyLicense("DEV_TOGGLE");
+              if (setIsPro) setIsPro(newState);
+            }}
+            style={{
+              fontSize: "13px",
+              padding: "8px 16px",
+              borderRadius: "12px",
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border)",
+              color: "var(--text-primary)",
+              cursor: "pointer",
+            }}
+          >
+            {isPro ? "Disable Pro Mode" : "Enable Pro Mode"}
+          </button>
+        </div>
       </div>
     </motion.div>
   );

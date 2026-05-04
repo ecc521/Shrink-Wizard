@@ -11,6 +11,8 @@ DEFS_Debug := \
 	'-D_FILE_OFFSET_BITS=64' \
 	'-D_DARWIN_USE_64_BIT_INODE=1' \
 	'-D_LARGEFILE_SOURCE' \
+	'-DOPENSSL_NO_PINSHARED' \
+	'-DOPENSSL_THREADS' \
 	'-DBUILDING_NODE_EXTENSION' \
 	'-DDEBUG' \
 	'-D_DEBUG'
@@ -22,7 +24,7 @@ CFLAGS_Debug := \
 	-fno-strict-aliasing \
 	-mmacosx-version-min=10.15 \
 	-arch \
-	x86_64 \
+	arm64 \
 	-Wall \
 	-Wendif-labels \
 	-W \
@@ -44,14 +46,14 @@ CFLAGS_OBJC_Debug :=
 CFLAGS_OBJCC_Debug :=
 
 INCS_Debug := \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/include/node \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/src \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/openssl/config \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/openssl/openssl/include \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/uv/include \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/zlib \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/v8/include \
-	-I/Users/tuckerwillenborg/Documents/GitHub/Shrink-Wizard/.daemon-worktree/node_modules/node-addon-api
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/include/node \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/src \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/openssl/config \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/openssl/openssl/include \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/uv/include \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/zlib \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/v8/include \
+	-I/Users/tuckerwillenborg/Documents/GitHub/Shrink-Wizard/node_modules/node-addon-api
 
 DEFS_Release := \
 	'-DNODE_GYP_MODULE_NAME=secure_ipc' \
@@ -62,6 +64,8 @@ DEFS_Release := \
 	'-D_FILE_OFFSET_BITS=64' \
 	'-D_DARWIN_USE_64_BIT_INODE=1' \
 	'-D_LARGEFILE_SOURCE' \
+	'-DOPENSSL_NO_PINSHARED' \
+	'-DOPENSSL_THREADS' \
 	'-DBUILDING_NODE_EXTENSION'
 
 # Flags passed to all source files.
@@ -71,7 +75,7 @@ CFLAGS_Release := \
 	-fno-strict-aliasing \
 	-mmacosx-version-min=10.15 \
 	-arch \
-	x86_64 \
+	arm64 \
 	-Wall \
 	-Wendif-labels \
 	-W \
@@ -93,14 +97,14 @@ CFLAGS_OBJC_Release :=
 CFLAGS_OBJCC_Release :=
 
 INCS_Release := \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/include/node \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/src \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/openssl/config \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/openssl/openssl/include \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/uv/include \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/zlib \
-	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/25.2.1/deps/v8/include \
-	-I/Users/tuckerwillenborg/Documents/GitHub/Shrink-Wizard/.daemon-worktree/node_modules/node-addon-api
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/include/node \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/src \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/openssl/config \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/openssl/openssl/include \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/uv/include \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/zlib \
+	-I/Users/tuckerwillenborg/Library/Caches/node-gyp/24.14.1/deps/v8/include \
+	-I/Users/tuckerwillenborg/Documents/GitHub/Shrink-Wizard/node_modules/node-addon-api
 
 OBJS := \
 	$(obj).target/$(TARGET)/src/main/compression/daemon/native/secure_ipc.o
@@ -139,7 +143,7 @@ LDFLAGS_Debug := \
 	-Wl,-search_paths_first \
 	-mmacosx-version-min=10.15 \
 	-arch \
-	x86_64 \
+	arm64 \
 	-L$(builddir) \
 	-stdlib=libc++
 
@@ -152,7 +156,7 @@ LDFLAGS_Release := \
 	-Wl,-search_paths_first \
 	-mmacosx-version-min=10.15 \
 	-arch \
-	x86_64 \
+	arm64 \
 	-L$(builddir) \
 	-stdlib=libc++
 

@@ -28,7 +28,7 @@ function createWindow() {
   });
 
   if (process.env.NODE_ENV === "development") {
-    AppState.mainWindow.loadURL("http://localhost:5173");
+    AppState.mainWindow.loadURL("http://localhost:5174");
     AppState.mainWindow.webContents.openDevTools();
   } else {
     AppState.mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
@@ -36,7 +36,7 @@ function createWindow() {
 
   // IMPENETRABLE LOCK: Prevent Chromium from natively loading dropped files and causing a White Screen
   AppState.mainWindow.webContents.on("will-navigate", (e, url) => {
-    if (url !== "http://localhost:5173/") {
+    if (url !== "http://localhost:5174/") {
       e.preventDefault();
     }
   });

@@ -1,7 +1,7 @@
-import * as os from "os";
-import { spawn } from "child_process";
-import path from "path";
-import fs from "fs";
+import * as os from "node:os";
+import { spawn } from "node:child_process";
+import path from "node:path";
+import fs from "node:fs";
 import { app } from "electron";
 
 function getBasePath(): string {
@@ -72,7 +72,7 @@ function getDjxlBinaryPath(): string {
  * If the resulting .jxl is mathematically successfully created and smaller than the original JPEG,
  * the original JPEG is unlinked (deleted) to complete the lossless archival.
  */
-export async function compressJpegToJxlNative(
+export async function compressImageToJxlNative(
   srcPath: string,
   destPath: string,
   options?: JxlCompressOptions,
@@ -82,7 +82,16 @@ export async function compressJpegToJxlNative(
 
   // -d 0 enforces mathematically pure lossless construction (pixel-perfect AND metadata preservation).
   // -e sets the effort level setting (1-9).
-  const args = [srcPath, destPath, "-d", "0", "-e", effort.toString()];
+  // --num_threads=0 forces single-threaded execution to prevent thread explosion during concurrent processing.
+  const args = [
+    srcPath,
+    destPath,
+    "-d",
+    "0",
+    "-e",
+    effort.toString(),
+    "--num_threads=0",
+  ];
 
   const originalSize = (await fs.promises.stat(srcPath)).size;
 
@@ -99,8 +108,10 @@ export async function compressJpegToJxlNative(
     });
     if (proc.pid) {
       try {
-        os.setPriority(proc.pid, os.constants.priority.PRIORITY_LOW);
-      } catch (e) {}
+        os.setPriority(proc.pid, os.constants.priority.PRIORITY_BELOW_NORMAL);
+      } catch {
+        /* ignore */
+      }
     }
 
     let errOut = "";
@@ -145,7 +156,7 @@ export async function compressJpegToJxlNative(
  * Restores a JXL file back to its exact bit-for-bit mathematical JPEG form.
  * After Djxl cleanly writes the new .jpg, the .jxl is deleted.
  */
-export async function restoreJxlToJpegNative(
+export async function restoreJxlToImageNative(
   srcPath: string,
   destPath: string,
 ): Promise<{ originalSize: number; uncompressedSize: number }> {
@@ -153,7 +164,8 @@ export async function restoreJxlToJpegNative(
 
   const originalSize = (await fs.promises.stat(srcPath)).size;
 
-  const args = [srcPath, destPath];
+  // --num_threads=0 prevents thread explosion when decompresing many files concurrently.
+  const args = [srcPath, destPath, "--num_threads=0"];
 
   await new Promise<void>((resolve, reject) => {
     const env = { ...process.env };
@@ -167,8 +179,10 @@ export async function restoreJxlToJpegNative(
     });
     if (proc.pid) {
       try {
-        os.setPriority(proc.pid, os.constants.priority.PRIORITY_LOW);
-      } catch (e) {}
+        os.setPriority(proc.pid, os.constants.priority.PRIORITY_BELOW_NORMAL);
+      } catch {
+        /* ignore */
+      }
     }
 
     let errOut = "";

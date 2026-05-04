@@ -34,7 +34,7 @@ export async function getCompressionData(
 
     detector.stderr.on("data", (data) => reject(new Error(data.toString())));
 
-    detector.on("close", (code) => {
+    detector.on("close", () => {
       // Note: compact.exe can exit with non-zero if some files aren't compressed, but still provide valid output.
       try {
         // Look for: "    12345 :      6789 = x.x to 1"
@@ -83,8 +83,13 @@ export async function transparentlyCompress(
     const compressor = spawn("compact", ["/C", `/EXE:${algo}`, src]);
     if (compressor.pid) {
       try {
-        os.setPriority(compressor.pid, os.constants.priority.PRIORITY_LOW);
-      } catch (e) {}
+        os.setPriority(
+          compressor.pid,
+          os.constants.priority.PRIORITY_BELOW_NORMAL,
+        );
+      } catch {
+        /* ignore */
+      }
     }
     let errorOutput = "";
 
@@ -125,8 +130,13 @@ export async function undoTransparentCompression(
     const decompressor = spawn("compact", ["/U", "/EXE:LZX", src]); // The algorithm flag doesn't matter much for decompression
     if (decompressor.pid) {
       try {
-        os.setPriority(decompressor.pid, os.constants.priority.PRIORITY_LOW);
-      } catch (e) {}
+        os.setPriority(
+          decompressor.pid,
+          os.constants.priority.PRIORITY_BELOW_NORMAL,
+        );
+      } catch {
+        /* ignore */
+      }
     }
     let errorOutput = "";
 
@@ -157,7 +167,7 @@ export async function undoTransparentCompression(
  * Note: Does not require admin privileges just to query
  */
 export async function queryCompactOS(): Promise<boolean> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const query = spawn("compact", ["/CompactOS:query"]);
     let output = "";
 
@@ -165,7 +175,7 @@ export async function queryCompactOS(): Promise<boolean> {
       output += data.toString();
     });
 
-    query.on("close", (code) => {
+    query.on("close", () => {
       // Typically: "The system is in the Compact state. It will remain in this state unless an administrator changes it."
       if (
         output.includes("in the Compact state") &&

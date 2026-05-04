@@ -1,42 +1,27 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  HardDrive,
-  Settings,
-  Search,
-  CheckCircle,
-  AlertTriangle,
-  ChevronRight,
-  X,
-  File,
-  Zap,
-  Info,
-  ArrowUpDown,
-  ChevronDown,
-  Sparkles,
-} from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { HardDrive, Search, Zap, Info } from "lucide-react";
 import {
   formatPath,
   formatBytes,
   formatCompactNumber,
 } from "../utils/formatters";
 import type { QueueJob } from "../App";
+import type { ScanResult, ProgressData } from "../../shared/ipc-types";
 
 export function ScannerView({
-  isAdminUser,
-  isPro,
   onMigrate,
   onProcessingChange,
 }: {
   isAdminUser: boolean;
   isPro: boolean;
-  onMigrate: (paths: string[]) => void;
+  onMigrate: (
+    paths: string[],
+    estimates: { imageMB: number; fileMB: number },
+  ) => void;
   onProcessingChange: (processing: boolean) => void;
 }) {
   const [activeQueue, setActiveQueue] = useState<QueueJob[]>([]);
-  const [selectedScanType, setSelectedScanType] = useState<"quick" | "full">(
-    "quick",
-  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [hoveredScanBox, setHoveredScanBox] = useState<"quick" | "full" | null>(
     null,
@@ -46,7 +31,7 @@ export function ScannerView({
     onProcessingChange(isProcessing);
   }, [isProcessing, onProcessingChange]);
 
-  const [doneQueueHeight, setDoneQueueHeight] = useState(30);
+  // const [doneQueueHeight, setDoneQueueHeight] = useState(30);
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
   const [endedEarly, setEndedEarly] = useState(false);
 
@@ -64,14 +49,20 @@ export function ScannerView({
 
   const handleRunScan = (type: "quick" | "full") => {
     if (isProcessing) return;
-    
-    let defaultQuickPaths = window.electron?.platform === "win32" 
-      ? ["C:\\Program Files", "C:\\Program Files (x86)", "~/Documents", "~/Downloads", "~/Pictures"]
-      : ["/Applications", "~/Documents", "~/Downloads", "~/Pictures"];
-      
-    let defaultFullPaths = window.electron?.platform === "win32" 
-      ? ["C:\\"]
-      : ["/"];
+
+    const defaultQuickPaths =
+      window.electron?.platform === "win32"
+        ? [
+            "C:\\Program Files",
+            "C:\\Program Files (x86)",
+            "~/Documents",
+            "~/Downloads",
+            "~/Pictures",
+          ]
+        : ["/Applications", "~/Documents", "~/Downloads", "~/Pictures"];
+
+    const defaultFullPaths =
+      window.electron?.platform === "win32" ? ["C:\\"] : ["/"];
 
     const paths = type === "quick" ? defaultQuickPaths : defaultFullPaths;
 
@@ -89,13 +80,8 @@ export function ScannerView({
 
   useEffect(() => {
     if (!isDraggingDivider) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      const windowHeight = window.innerHeight;
-      const mouseVertical = e.clientY;
-      const heightPercent =
-        ((windowHeight - mouseVertical) / windowHeight) * 100;
-      if (heightPercent >= 5 && heightPercent <= 90)
-        setDoneQueueHeight(heightPercent);
+    const handleMouseMove = (/*e: MouseEvent*/) => {
+      // Logic for divider dragging was disabled
     };
     const handleMouseUp = () => setIsDraggingDivider(false);
 
@@ -111,29 +97,31 @@ export function ScannerView({
     savingsMB: 0,
     originalMB: 0,
     fileCount: 0,
+    imageSavingsMB: 0,
+    fileSavingsMB: 0,
   });
 
   useEffect(() => {
     const doneJobs = activeQueue.filter((j) => j.status === "done");
     doneJobsTotalsRef.current = {
       savingsMB: doneJobs.reduce(
-        (acc, job) =>
-          acc +
-          (job.progressData?.savingsMB ||
-            (job.progressData as any)?.currentSettingsSavingsMB ||
-            0),
+        (acc, job) => acc + (job.progressData?.savingsMB || 0),
         0,
       ),
       originalMB: doneJobs.reduce(
-        (acc, job) =>
-          acc +
-          (job.progressData?.processedMB ||
-            (job.progressData as any)?.originalMB ||
-            0),
+        (acc, job) => acc + (job.progressData?.processedMB || 0),
         0,
       ),
       fileCount: doneJobs.reduce(
-        (acc, job) => acc + ((job.progressData as any)?.fileCount || 0),
+        (acc, job) => acc + (job.progressData?.fileCount || 0),
+        0,
+      ),
+      imageSavingsMB: doneJobs.reduce(
+        (acc, job) => acc + (job.progressData?.imageMaxSavingsMB || 0),
+        0,
+      ),
+      fileSavingsMB: doneJobs.reduce(
+        (acc, job) => acc + (job.progressData?.fileMaxSavingsMB || 0),
         0,
       ),
     };
@@ -141,12 +129,13 @@ export function ScannerView({
 
   useEffect(() => {
     if (window.electron) {
-      window.electron.onScanProgress((data: any) => {
+      window.electron.onScanProgress((data: ProgressData) => {
         // Mute React! Directly bind into pure DOM components to render at 60 FPS without V8 Garbage Collection drops
         const totals = doneJobsTotalsRef.current;
-        const liveSavings = totals.savingsMB + data.currentSettingsSavingsMB;
-        const liveScanned = totals.originalMB + data.originalMB;
-        const liveFiles = totals.fileCount + data.fileCount;
+        const liveSavings =
+          totals.savingsMB + (data.currentSettingsSavingsMB || 0);
+        const liveScanned = totals.originalMB + (data.originalMB || 0);
+        const liveFiles = totals.fileCount + (data.fileCount || 0);
 
         const savingsEl = document.getElementById("live-savings-val");
         if (savingsEl) savingsEl.textContent = formatBytes(liveSavings, true);
@@ -158,7 +147,7 @@ export function ScannerView({
         if (filesEl) filesEl.textContent = formatCompactNumber(liveFiles);
 
         const pathEl = document.getElementById("live-path-val");
-        if (pathEl) pathEl.textContent = formatPath(data.path);
+        if (pathEl) pathEl.textContent = formatPath(data.path || "");
       });
       return () => {
         window.electron.removeScanProgressListeners();
@@ -200,7 +189,15 @@ export function ScannerView({
                     processedMB: 0,
                     savingsMB: 0,
                     percentage: 0,
-                  } as any,
+                    totalMB: 0,
+                    totalFiles: 0,
+                    compressedCount: 0,
+                    skippedCount: 0,
+                    skippedMB: 0,
+                    failedCount: 0,
+                    alreadyCompressedCount: 0,
+                    phase: "processing",
+                  } as ProgressData,
                 }
               : j,
           ),
@@ -208,7 +205,7 @@ export function ScannerView({
 
         while (true) {
           if (!isProcessingRef.current) break;
-          const freshQueue = activeQueue; // It's a stale closure, wait! We can just use an IPC signal.
+          // const freshQueue = activeQueue; // It's a stale closure, wait! We can just use an IPC signal.
           // Wait, `isPaused` state is handled via `window.electron.togglePause()`. Backend halts natively.
           break;
         }
@@ -225,32 +222,58 @@ export function ScannerView({
           setActiveQueue((prev) =>
             prev.map((j) => {
               if (j.id === currentState.id) {
-                const finalData =
+                const finalData: ScanResult =
                   res && res.results && res.results.length > 0
                     ? res.results[0]
                     : {
+                        path: currentState.path,
                         currentSettingsSavingsMB: 0,
                         maxSettingsSavingsMB: 0,
                         originalMB: 0,
                         fileCount: 0,
                       };
-                return {
+                const finalJob = {
                   ...j,
-                  status: "done",
+                  status: "done" as const,
                   progressData: {
                     processedMB: finalData.originalMB,
                     savingsMB: finalData.currentSettingsSavingsMB,
                     percentage: 100, // done
-                    maxSavings: finalData.maxSettingsSavingsMB,
+                    maxSettingsSavingsMB: finalData.maxSettingsSavingsMB,
                     fileCount: finalData.fileCount,
-                  } as any,
+                    totalMB: finalData.originalMB,
+                    totalFiles: finalData.fileCount,
+                    imageMaxSavingsMB: finalData.imageMaxSavingsMB || 0,
+                    fileMaxSavingsMB: finalData.fileMaxSavingsMB || 0,
+                    compressedCount: 0,
+                    skippedCount: 0,
+                    skippedMB: 0,
+                    failedCount: 0,
+                    alreadyCompressedCount: 0,
+                    phase: "done" as const,
+                  } as ProgressData,
                 };
+
+                // Update the persistent totals ref so migration values aren't 0
+                doneJobsTotalsRef.current.savingsMB +=
+                  finalJob.progressData.savingsMB;
+                doneJobsTotalsRef.current.originalMB +=
+                  finalJob.progressData.processedMB;
+                doneJobsTotalsRef.current.fileCount +=
+                  finalJob.progressData.fileCount || 0;
+                doneJobsTotalsRef.current.imageSavingsMB +=
+                  finalData.imageMaxSavingsMB || 0;
+                doneJobsTotalsRef.current.fileSavingsMB +=
+                  finalData.fileMaxSavingsMB || 0;
+
+                return finalJob;
               }
               return j;
             }),
           );
-        } catch (err: any) {
-          console.error("Scan aborted or failed for", currentState.path, err);
+        } catch (err) {
+          const error = err as Error;
+          console.error("Scan aborted or failed for", currentState.path, error);
           setActiveQueue((prev) =>
             prev.map((j) =>
               j.id === currentState.id ? { ...j, status: "failed" } : j,
@@ -266,41 +289,22 @@ export function ScannerView({
     }
   };
 
-  const inProgressJobs = activeQueue.filter(
-    (j) => j.status !== "done" && j.status !== "failed",
-  );
   const doneJobs = activeQueue.filter(
     (j) => j.status === "done" || j.status === "failed",
   );
   const totalSavingsMB = activeQueue.reduce(
-    (acc, job) =>
-      acc +
-      (job.progressData?.savingsMB ||
-        (job.progressData as any)?.currentSettingsSavingsMB ||
-        0),
+    (acc, job) => acc + (job.progressData?.savingsMB || 0),
     0,
   );
   const totalScannedMB = activeQueue.reduce(
-    (acc, job) =>
-      acc +
-      (job.progressData?.processedMB ||
-        (job.progressData as any)?.originalMB ||
-        0),
+    (acc, job) => acc + (job.progressData?.processedMB || 0),
     0,
   );
   const totalFilesScanned = activeQueue.reduce(
-    (acc, job) => acc + ((job.progressData as any)?.fileCount || 0),
+    (acc, job) => acc + (job.progressData?.fileCount || 0),
     0,
   );
-  const totalMaxSavingsMB = activeQueue.reduce(
-    (acc, job) =>
-      acc +
-      ((job.progressData as any)?.maxSettingsSavingsMB ||
-        (job.progressData as any)?.maxSavings ||
-        0),
-    0,
-  );
-  const potentialProSavingsMB = Math.max(0, totalMaxSavingsMB - totalSavingsMB);
+  // const inProgressJobs = activeQueue.filter(
 
   const selectedDonePaths = doneJobs.map((j) => j.path);
 
@@ -332,6 +336,24 @@ export function ScannerView({
             }}
           >
             <Search className="text-primary" /> Smart Scanner
+            <div
+              title="Scanning your system to estimate savings is always free."
+              style={{
+                background: "rgba(16, 185, 129, 0.1)",
+                border: "1px solid rgba(16, 185, 129, 0.2)",
+                borderRadius: "12px",
+                padding: "2px 8px",
+                color: "var(--success)",
+                fontSize: "11px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                cursor: "help",
+                marginLeft: "4px",
+              }}
+            >
+              Free
+            </div>
           </h1>
           <p
             className="view-subtitle"
@@ -602,7 +624,13 @@ export function ScannerView({
                         borderRadius: "30px",
                         boxShadow: "0 4px 20px var(--accent-glow)",
                       }}
-                      onClick={() => onMigrate(selectedDonePaths)}
+                      onClick={() =>
+                        onMigrate(selectedDonePaths, {
+                          imageMB:
+                            doneJobsTotalsRef.current.imageSavingsMB || 0,
+                          fileMB: doneJobsTotalsRef.current.fileSavingsMB || 0,
+                        })
+                      }
                     >
                       Reclaim Space Now
                     </button>
@@ -764,8 +792,8 @@ export function ScannerView({
                       lineHeight: "1.5",
                     }}
                   >
-                    Scans your installed programs, Documents, Downloads, and Photos.
-                    Fastest way to find massive savings.
+                    Scans your installed programs, Documents, Downloads, and
+                    Photos. Fastest way to find massive savings.
                   </p>
                 </div>
 

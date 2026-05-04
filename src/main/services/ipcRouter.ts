@@ -6,8 +6,8 @@ import { scanSystemHandler } from "./scannerEngine";
 import { OSAdapter } from "./osAdapter";
 import { compressJpegNative } from "../compression/jpeg";
 import {
-  compressJpegToJxlNative,
-  restoreJxlToJpegNative,
+  compressImageToJxlNative,
+  restoreJxlToImageNative,
 } from "../compression/jxl";
 import { trackEvent } from "./analytics";
 
@@ -16,7 +16,17 @@ export function registerIpcHandlers() {
   ipcMain.handle("scan-system", scanSystemHandler);
 
   ipcMain.handle("open-directory", async () => {
-    const properties: any[] =
+    const properties: (
+      | "openFile"
+      | "openDirectory"
+      | "multiSelections"
+      | "showHiddenFiles"
+      | "createDirectory"
+      | "promptToCreate"
+      | "noResolveAliases"
+      | "treatPackageAsDirectory"
+      | "dontAddToRecent"
+    )[] =
       process.platform === "darwin"
         ? ["openFile", "openDirectory", "multiSelections"]
         : ["openDirectory", "multiSelections"];
@@ -58,16 +68,16 @@ export function registerIpcHandlers() {
   });
 
   ipcMain.handle(
-    "compress-jpeg-to-jxl",
+    "compress-image-to-jxl",
     async (_, filePath: string, destPath: string) => {
-      return compressJpegToJxlNative(filePath, destPath);
+      return compressImageToJxlNative(filePath, destPath);
     },
   );
 
   ipcMain.handle(
-    "restore-jxl-to-jpeg",
+    "restore-jxl-to-image",
     async (_, filePath: string, destPath: string) => {
-      return restoreJxlToJpegNative(filePath, destPath);
+      return restoreJxlToImageNative(filePath, destPath);
     },
   );
 
@@ -98,10 +108,20 @@ export function registerIpcHandlers() {
   });
 
   ipcMain.handle("get-global-savings", () => {
-    return GlobalStats.globalSavingsMB;
+    return {
+      globalSavingsMB: GlobalStats.globalSavingsMB,
+      dailySavingsMB: GlobalStats.dailySavingsMB,
+      hasSeenTrialEnd: GlobalStats.hasSeenTrialEnd,
+    };
   });
 
   ipcMain.handle("verify-license", async (_, licenseKey: string) => {
+    if (!app.isPackaged && licenseKey === "DEV_TOGGLE") {
+      GlobalStats.isPro = !GlobalStats.isPro;
+      saveStats(0);
+      return GlobalStats.isPro;
+    }
+
     if (licenseKey.startsWith("SW-") || licenseKey === "PRO_TEST") {
       GlobalStats.isPro = true;
       saveStats(0); // Safely trigger the file system write through statsRepository

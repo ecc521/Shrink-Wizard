@@ -15,14 +15,14 @@ const api: ElectronAPI = {
     ipcRenderer.invoke("is-transparently-compressed", filePath),
 
   compressJpeg: (filePath) => ipcRenderer.invoke("compress-jpeg", filePath),
-  compressJpegToJxl: (filePath, destPath) =>
-    ipcRenderer.invoke("compress-jpeg-to-jxl", filePath, destPath),
-  restoreJxlToJpeg: (filePath, destPath) =>
-    ipcRenderer.invoke("restore-jxl-to-jpeg", filePath, destPath),
+  compressImageToJxl: (filePath, destPath) =>
+    ipcRenderer.invoke("compress-image-to-jxl", filePath, destPath),
+  restoreJxlToImage: (filePath, destPath) =>
+    ipcRenderer.invoke("restore-jxl-to-image", filePath, destPath),
   processPaths: (
     filePaths: string[],
     mode: "compress" | "restore",
-    options: any,
+    options: ProcessOptions,
   ) => ipcRenderer.invoke("process-paths", filePaths, mode, options),
 
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
@@ -38,16 +38,16 @@ const api: ElectronAPI = {
   verifyLicense: (key: string) => ipcRenderer.invoke("verify-license", key),
   isAdmin: () => ipcRenderer.invoke("is-admin"),
   getGlobalSavingsMB: () => ipcRenderer.invoke("get-global-savings"),
-  scanSystem: (paths: string[], options: any) =>
+  scanSystem: (paths, options) =>
     ipcRenderer.invoke("scan-system", paths, options),
 
-  onScanUpdate: (callback: (data: any) => void) => {
+  onScanUpdate: (callback) => {
     ipcRenderer.on("scan-update", (_, data) => callback(data));
   },
   removeScanUpdateListeners: () => {
     ipcRenderer.removeAllListeners("scan-update");
   },
-  onScanProgress: (callback: (data: any) => void) => {
+  onScanProgress: (callback) => {
     ipcRenderer.on("scan-progress", (_, data) => callback(data));
   },
   removeScanProgressListeners: () => {
@@ -56,18 +56,20 @@ const api: ElectronAPI = {
   abortScan: () => ipcRenderer.invoke("abort-scan"),
   abortProcess: () => ipcRenderer.invoke("abort-process"),
 
-  onProgress: (callback: (data: any) => void) => {
+  onProgress: (callback) => {
     ipcRenderer.on("progress-update", (_, data) => callback(data));
   },
   removeProgressListeners: () => {
     ipcRenderer.removeAllListeners("progress-update");
   },
 
-  onLimitReached: (callback: () => void) => {
-    ipcRenderer.on("limit-reached", () => callback());
+  onLimitReached: (callback: (limitType: "trial" | "daily") => void) => {
+    ipcRenderer.on("trial-limit-reached", () => callback("trial"));
+    ipcRenderer.on("daily-limit-reached", () => callback("daily"));
   },
   removeLimitReachedListeners: () => {
-    ipcRenderer.removeAllListeners("limit-reached");
+    ipcRenderer.removeAllListeners("trial-limit-reached");
+    ipcRenderer.removeAllListeners("daily-limit-reached");
   },
   togglePause: (paused: boolean) => ipcRenderer.invoke("toggle-pause", paused),
 };
@@ -79,6 +81,6 @@ if (process.contextIsolated) {
     console.error(error);
   }
 } else {
-  // @ts-ignore (define in dts)
+  // @ts-expect-error (define in dts)
   window.electron = api;
 }

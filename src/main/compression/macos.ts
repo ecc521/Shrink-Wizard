@@ -1,12 +1,6 @@
-import fs from "fs";
-import * as os from "os";
-import { spawn } from "child_process";
-import path from "path";
-import { app } from "electron";
-
-function getBasePath(): string {
-  return app.isPackaged ? process.resourcesPath : app.getAppPath();
-}
+import fs from "node:fs";
+import * as os from "node:os";
+import { spawn } from "node:child_process";
 
 /**
  * Gets the disk usage of a file in bytes (based on 512-byte blocks).
@@ -61,8 +55,13 @@ export async function undoTransparentCompression(
     const decompressor = spawn("afscexpand", [src]);
     if (decompressor.pid) {
       try {
-        os.setPriority(decompressor.pid, os.constants.priority.PRIORITY_LOW);
-      } catch (e) {}
+        os.setPriority(
+          decompressor.pid,
+          os.constants.priority.PRIORITY_BELOW_NORMAL,
+        );
+      } catch {
+        /* ignore */
+      }
     }
     decompressor.stderr.on("data", (data) =>
       reject(new Error(data.toString())),
@@ -112,7 +111,7 @@ export interface CompressResult {
  */
 export async function transparentlyCompress(
   src: string,
-  options?: CompressOptions,
+  _options?: CompressOptions,
 ): Promise<CompressResult> {
   const isCompressed = await isTransparentlyCompressed(src);
   if (isCompressed) {
@@ -149,14 +148,19 @@ export async function transparentlyCompress(
   }
 
   return new Promise((resolve, reject) => {
-    const tmpPath = `${src}.wzd_tmp_${Math.random().toString(36).substr(2, 9)}`;
+    const tmpPath = `${src}.wzd_tmp_${Math.random().toString(36).substring(2, 11)}`;
     const args = ["--hfsCompression", src, tmpPath];
 
     const compressor = spawn("ditto", args);
     if (compressor.pid) {
       try {
-        os.setPriority(compressor.pid, os.constants.priority.PRIORITY_LOW);
-      } catch (e) {}
+        os.setPriority(
+          compressor.pid,
+          os.constants.priority.PRIORITY_BELOW_NORMAL,
+        );
+      } catch {
+        /* ignore */
+      }
     }
 
     let errorOutput = "";
@@ -170,7 +174,9 @@ export async function transparentlyCompress(
         // Cleanup tmp file if ditto failed mid-way
         try {
           await fs.promises.unlink(tmpPath);
-        } catch (e) {}
+        } catch {
+          /* ignore */
+        }
         return reject(
           new Error(`ditto exited with code ${code}: ${errorOutput}`),
         );
@@ -191,7 +197,9 @@ export async function transparentlyCompress(
         // Cleanup if rename fails (e.g. permissions)
         try {
           await fs.promises.unlink(tmpPath);
-        } catch (e) {}
+        } catch {
+          /* ignore */
+        }
         reject(err);
       }
     });

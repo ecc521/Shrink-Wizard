@@ -1,15 +1,19 @@
-import * as path from "path";
-import * as fs from "fs";
-import * as os from "os";
-import * as zlib from "zlib";
+import { promisify } from "util";
+import * as path from "node:path";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as zlib from "node:zlib";
 import { AppState } from "./state";
 import { GlobalStats } from "./statsRepository";
 import { trackEvent } from "./analytics";
+import { getOptimalConcurrency } from "./osAdapter";
+import { IpcMainInvokeEvent } from "electron";
+import { ProcessOptions, ScanResult } from "../../shared/ipc-types";
 
 export async function scanSystemHandler(
-  event: any,
+  event: IpcMainInvokeEvent,
   paths: string[],
-  options: any,
+  options: ProcessOptions,
 ) {
   if (options?.clearCache) {
     AppState.globalScannedInodes.clear();
@@ -17,7 +21,7 @@ export async function scanSystemHandler(
   }
 
   let skippedCount = 0;
-  const deflateAsync = require("util").promisify(zlib.deflate);
+  const deflateAsync = promisify(zlib.deflate);
 
   async function isProgressiveJpeg(targetPath: string): Promise<boolean> {
     let fd;
@@ -34,7 +38,8 @@ export async function scanSystemHandler(
         }
         i++;
       }
-    } catch (e) {
+    } catch {
+      /* ignore */
     } finally {
       if (fd) await fd.close().catch(() => {});
     }
@@ -60,12 +65,13 @@ export async function scanSystemHandler(
       }
     }
   }
-  const ioLimit = new Semaphore(os.cpus().length * 4); // Capped IO concurrency
+  const optimalConcurrency = getOptimalConcurrency();
+  const ioLimit = new Semaphore(optimalConcurrency * 4); // Capped IO concurrency
   const statLimit = new Semaphore(64); // Reduced strict stat batching to prevent V8 LibUV threadpool queue starvation
 
   AppState.currentScanToken++;
   const myToken = AppState.currentScanToken;
-  const results: any[] = [];
+  const results: ScanResult[] = [];
 
   for (let rootPath of paths) {
     if (rootPath.startsWith("~/")) {
@@ -75,13 +81,15 @@ export async function scanSystemHandler(
     let runOrigSize = 0;
     let runCurrentSavings = 0;
     let runMaxSavings = 0;
+    let runImageMaxSavings = 0;
+    let runFileMaxSavings = 0;
     let fileCount = 0;
     let lastEmit = Date.now();
 
     const walkQueue: { dir: string; depth: number }[] = [
       { dir: rootPath, depth: 0 },
     ];
-    const maxWorkers = os.cpus().length > 0 ? os.cpus().length : 8; // One recursive native traversal thread per CPU core
+    const maxWorkers = optimalConcurrency > 0 ? optimalConcurrency : 8; // One recursive native traversal thread per optimal CPU core
     let activeWorkers = 0;
 
     await new Promise<void>((resolve) => {
@@ -99,13 +107,13 @@ export async function scanSystemHandler(
             if (!task) break;
             if (task.depth > 12) continue;
 
-            let entries: any[] = [];
+            let entries: fs.Dirent[] = [];
             try {
               await statLimit.acquire();
               entries = await fs.promises.readdir(task.dir, {
                 withFileTypes: true,
               });
-            } catch (e) {
+            } catch {
               skippedCount++;
             } finally {
               statLimit.release();
@@ -113,7 +121,10 @@ export async function scanSystemHandler(
 
             for (const entry of entries) {
               if (myToken !== AppState.currentScanToken) break;
-              while (AppState.isQueuePaused && myToken === AppState.currentScanToken) {
+              while (
+                AppState.isQueuePaused &&
+                myToken === AppState.currentScanToken
+              ) {
                 await new Promise((r) => setTimeout(r, 500));
               }
               if (myToken !== AppState.currentScanToken) break;
@@ -127,7 +138,7 @@ export async function scanSystemHandler(
                 try {
                   await statLimit.acquire();
                   stat = await fs.promises.stat(fullPath);
-                } catch (e) {
+                } catch {
                   skippedCount++;
                   continue;
                 } finally {
@@ -150,7 +161,7 @@ export async function scanSystemHandler(
                   const ext = path.extname(fullPath).toLowerCase();
                   if (
                     options.imageCompressionEnabled &&
-                    (ext === ".jpg" || ext === ".jpeg")
+                    (ext === ".jpg" || ext === ".jpeg" || ext === ".png")
                   ) {
                     await ioLimit.acquire();
                     const isProg = await isProgressiveJpeg(fullPath);
@@ -163,6 +174,7 @@ export async function scanSystemHandler(
                     runCurrentSavings +=
                       options.outputFormat === "jxl" ? jxlSavings : mozSavings;
                     runMaxSavings += jxlSavings;
+                    runImageMaxSavings += jxlSavings;
                   } else {
                     let ratio = 0.35;
                     if (physicalSize > 10 * 1024 * 1024) {
@@ -185,7 +197,8 @@ export async function scanSystemHandler(
                           const r = (bytesRead - def.length) / bytesRead;
                           ratio = Math.max(0, Math.min(r, 0.6));
                         }
-                      } catch (e) {
+                      } catch {
+                        /* ignore */
                       } finally {
                         if (fd) await fd.close().catch(() => {});
                         ioLimit.release();
@@ -195,6 +208,7 @@ export async function scanSystemHandler(
                     runCurrentSavings +=
                       options.nativeAlgo !== "none" ? nativeSavings : 0;
                     runMaxSavings += nativeSavings;
+                    runFileMaxSavings += nativeSavings;
                   }
 
                   // Live Throttled UI Updates
@@ -206,6 +220,8 @@ export async function scanSystemHandler(
                       originalMB: runOrigSize / 1048576,
                       currentSettingsSavingsMB: runCurrentSavings / 1048576,
                       maxSettingsSavingsMB: runMaxSavings / 1048576,
+                      imageMaxSavingsMB: runImageMaxSavings / 1048576,
+                      fileMaxSavingsMB: runFileMaxSavings / 1048576,
                       fileCount,
                     });
                   }
@@ -229,6 +245,8 @@ export async function scanSystemHandler(
         originalMB: runOrigSize / 1048576,
         currentSettingsSavingsMB: runCurrentSavings / 1048576,
         maxSettingsSavingsMB: runMaxSavings / 1048576,
+        imageMaxSavingsMB: runImageMaxSavings / 1048576,
+        fileMaxSavingsMB: runFileMaxSavings / 1048576,
         fileCount,
       });
       event.sender.send("scan-update", { results, skippedCount });

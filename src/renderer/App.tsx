@@ -1,32 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  HardDrive,
-  Settings,
-  Search,
-  CheckCircle,
-  AlertTriangle,
-  ChevronRight,
-  X,
-  File,
-  Zap,
-  Info,
-  ArrowUpDown,
-  ChevronDown,
-  Sparkles,
-} from "lucide-react";
 import "./index.css";
-import { formatBytes } from "./utils/formatters";
 import { CompressionView } from "./components/CompressionView";
 import { ScannerView } from "./components/ScannerView";
-import { SettingsView } from "./components/SettingsView";
+
 import { SystemView } from "./components/SystemView";
 import { StoreView } from "./components/StoreView";
 import { AboutView } from "./components/AboutView";
+import { SettingsView } from "./components/SettingsView";
 import { Sidebar } from "./components/Sidebar";
 import { EulaModal } from "./components/EulaModal";
 
-import type { ProgressData } from "../shared/ipc-types";
+import type { ProgressData, ElectronAPI } from "../shared/ipc-types";
 
 export interface QueueJob {
   id: string;
@@ -38,7 +23,7 @@ export interface QueueJob {
 
 declare global {
   interface Window {
-    electron: any;
+    electron: ElectronAPI;
   }
 }
 
@@ -46,15 +31,17 @@ type TTab =
   | "compress"
   | "decompress"
   | "system"
-  | "settings"
   | "about"
   | "store"
-  | "scanner";
+  | "scanner"
+  | "settings";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TTab>("scanner");
   const [isGlobalProcessing, setIsGlobalProcessing] = useState(false);
   const [globalSavingsMB, setGlobalSavingsMB] = useState(0);
+  const [dailySavingsMB, setDailySavingsMB] = useState(0);
+  const [hasSeenTrialEnd, setHasSeenTrialEnd] = useState(false);
   const [platform, setPlatform] = useState<string>("unknown");
 
   // CompactOS State
@@ -64,12 +51,46 @@ export default function App() {
   const [isCheckingOs, setIsCheckingOs] = useState(false);
 
   // Settings State
-  const [theme, setTheme] = useState("system");
-  const [nativeAlgo, setNativeAlgo] = useState("automatic");
-  const [imageCompressionEnabled, setImageCompressionEnabled] = useState(true);
-  const [jpegMetadata, setJpegMetadata] = useState(true);
-  const [outputFormat, setOutputFormat] = useState("jpeg");
-  const [jxlEffort, setJxlEffort] = useState(7);
+  const [theme, setTheme] = useState("system"); // Theme could be persisted too if needed, keeping simple for now
+  const [nativeAlgo, setNativeAlgo] = useState<
+    | "automatic"
+    | "lzvn"
+    | "lzfse"
+    | "zlib"
+    | "off"
+    | "none"
+    | "LZX"
+    | "XPRESS16K"
+    | "XPRESS8K"
+    | "XPRESS4K"
+  >(() => (localStorage.getItem("sw_nativeAlgo") as any) || "automatic");
+  const [fileCompressionEnabled, setFileCompressionEnabled] = useState(
+    () => localStorage.getItem("sw_fileComp") !== "false",
+  );
+  const [imageCompressionEnabled, setImageCompressionEnabled] = useState(
+    () => localStorage.getItem("sw_imageComp") !== "false",
+  );
+  const [outputFormat, setOutputFormat] = useState<"jxl" | "jpeg" | "original">(
+    () => (localStorage.getItem("sw_outputFormat") as any) || "jxl",
+  );
+  const [jxlEffort, setJxlEffort] = useState(() =>
+    parseInt(localStorage.getItem("sw_jxlEffort") || "7"),
+  );
+
+  // Persist Settings
+  useEffect(() => {
+    localStorage.setItem("sw_nativeAlgo", nativeAlgo);
+    localStorage.setItem("sw_fileComp", fileCompressionEnabled.toString());
+    localStorage.setItem("sw_imageComp", imageCompressionEnabled.toString());
+    localStorage.setItem("sw_outputFormat", outputFormat);
+    localStorage.setItem("sw_jxlEffort", jxlEffort.toString());
+  }, [
+    nativeAlgo,
+    fileCompressionEnabled,
+    imageCompressionEnabled,
+    outputFormat,
+    jxlEffort,
+  ]);
 
   // EULA State
   const [showEula, setShowEula] = useState(false);
@@ -80,6 +101,10 @@ export default function App() {
   // Scanner State
   const [isAdminUser, setIsAdminUser] = useState<boolean>(true);
   const [pendingScannerPaths, setPendingScannerPaths] = useState<string[]>([]);
+  const [scannerEstimates, setScannerEstimates] = useState<{
+    imageMB: number;
+    fileMB: number;
+  } | null>(null);
   const [autoStartCompression, setAutoStartCompression] = useState(false);
 
   useEffect(() => {
@@ -108,12 +133,6 @@ export default function App() {
   useEffect(() => {
     if (window.electron) {
       setPlatform(window.electron.platform);
-      setOutputFormat(
-        window.electron.platform === "darwin" ||
-          window.electron.platform === "win32"
-          ? "jxl"
-          : "jpeg",
-      );
 
       if (window.electron.platform === "win32") {
         checkCompactOS();
@@ -124,10 +143,16 @@ export default function App() {
       });
       window.electron
         .getGlobalSavingsMB?.()
-        .then((savings: number) => {
-          if (savings !== undefined) setGlobalSavingsMB(savings);
+        .then((stats) => {
+          if (stats) {
+            setGlobalSavingsMB(stats.globalSavingsMB);
+            setDailySavingsMB(stats.dailySavingsMB);
+            setHasSeenTrialEnd(stats.hasSeenTrialEnd);
+          }
         })
-        .catch((e: any) => console.log("global savings fetch failed", e));
+        .catch((_e: unknown) => {
+          /* ignore */
+        });
       window.electron.isAdmin().then((status: boolean) => {
         setIsAdminUser(status);
       });
@@ -191,6 +216,8 @@ export default function App() {
         isGlobalProcessing={isGlobalProcessing}
         isPro={isPro}
         globalSavingsMB={globalSavingsMB}
+        dailySavingsMB={dailySavingsMB}
+        hasSeenTrialEnd={hasSeenTrialEnd}
         platform={platform}
         handleNavClick={handleNavClick}
       />
@@ -200,6 +227,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="main-content">
+        <div className="main-drag-handle" />
         <AnimatePresence mode="wait">
           {activeTab === "compress" || activeTab === "decompress" ? (
             <motion.div
@@ -212,16 +240,27 @@ export default function App() {
             >
               <CompressionView
                 activeTab={activeTab}
+                platform={platform}
                 outputFormat={outputFormat}
+                setOutputFormat={setOutputFormat as (v: any) => void}
                 nativeAlgo={nativeAlgo}
+                setNativeAlgo={setNativeAlgo as (v: any) => void}
+                fileCompressionEnabled={fileCompressionEnabled}
+                setFileCompressionEnabled={setFileCompressionEnabled}
                 imageCompressionEnabled={imageCompressionEnabled}
-                jpegMetadata={jpegMetadata}
+                setImageCompressionEnabled={setImageCompressionEnabled}
                 jxlEffort={jxlEffort}
+                setJxlEffort={setJxlEffort}
                 isPro={isPro}
+                globalSavingsMB={globalSavingsMB}
+                dailySavingsMB={dailySavingsMB}
+                hasSeenTrialEnd={hasSeenTrialEnd}
                 pendingScannerPaths={pendingScannerPaths}
                 setPendingScannerPaths={setPendingScannerPaths}
                 autoStartCompression={autoStartCompression}
                 setAutoStartCompression={setAutoStartCompression}
+                scannerEstimates={scannerEstimates}
+                setScannerEstimates={setScannerEstimates}
                 isAdminUser={isAdminUser}
                 onProcessingChange={setIsGlobalProcessing}
                 onSavingsUpdate={setGlobalSavingsMB}
@@ -239,13 +278,18 @@ export default function App() {
               <ScannerView
                 isAdminUser={isAdminUser}
                 isPro={isPro}
-                onMigrate={(paths) => {
+                onMigrate={(paths, estimates) => {
                   setPendingScannerPaths(paths);
+                  if (estimates) {
+                    setScannerEstimates(estimates);
+                  }
                   setActiveTab("compress");
                 }}
                 onProcessingChange={setIsGlobalProcessing}
               />
             </motion.div>
+          ) : activeTab === "store" ? (
+            <StoreView key="store" isPro={isPro} setIsPro={setIsPro} />
           ) : activeTab === "settings" ? (
             <SettingsView
               key="settings"
@@ -253,21 +297,20 @@ export default function App() {
               theme={theme}
               setTheme={setTheme}
               nativeAlgo={nativeAlgo}
-              setNativeAlgo={setNativeAlgo}
+              setNativeAlgo={setNativeAlgo as any}
               imageCompressionEnabled={imageCompressionEnabled}
               setImageCompressionEnabled={setImageCompressionEnabled}
-              jpegMetadata={jpegMetadata}
-              setJpegMetadata={setJpegMetadata}
+              jpegMetadata={false} // Assuming default as it was not in App state
+              setJpegMetadata={() => {}}
               outputFormat={outputFormat}
-              setOutputFormat={setOutputFormat}
+              setOutputFormat={setOutputFormat as any}
               jxlEffort={jxlEffort}
               setJxlEffort={setJxlEffort}
               isPro={isPro}
+              setIsPro={setIsPro}
             />
-          ) : activeTab === "store" ? (
-            <StoreView key="store" isPro={isPro} setIsPro={setIsPro} />
           ) : activeTab === "system" ? (
-            <SystemView 
+            <SystemView
               key="system"
               compactOsEnabled={compactOsEnabled}
               isCheckingOs={isCheckingOs}
@@ -360,6 +403,14 @@ export default function App() {
           flex-direction: column;
           overflow: hidden;
           background-color: var(--bg-secondary);
+        }
+
+        .main-drag-handle {
+          height: 40px;
+          width: 100%;
+          -webkit-app-region: drag;
+          flex-shrink: 0;
+          z-index: 100;
         }
 
         .usage-tracker {
@@ -462,7 +513,7 @@ export default function App() {
 
         /* View styles */
         .view-container {
-          padding: 30px 40px;
+          padding: 0 40px 30px 40px;
           height: 100%;
           display: flex;
           flex-direction: column;
