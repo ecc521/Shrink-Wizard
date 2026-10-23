@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest an improvement to Shrink Wizard.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe what you are trying to do and what gets in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement
+      description: Describe how you would like Shrink Wizard to work.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or additional context
+      description: Optional. Include any workarounds you have tried.

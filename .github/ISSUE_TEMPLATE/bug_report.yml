@@ -1,0 +1,61 @@
+name: Bug report
+description: Report a problem with Shrink Wizard.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues first. Remove personal information from screenshots, logs, and file paths before posting.
+  - type: input
+    id: app-version
+    attributes:
+      label: Shrink Wizard version
+      placeholder: e.g. 1.0.3
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Mac (Apple Silicon)
+        - Mac (Intel)
+        - Windows (x64)
+        - Windows (ARM64)
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating system version
+      placeholder: Include the full OS version or build number.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the problem and any error message.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Screenshots, logs, or other context
+      description: Optional. Please remove private information before attaching anything.

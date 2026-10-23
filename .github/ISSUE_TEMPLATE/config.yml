@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Download Shrink Wizard
+    url: https://shrinkwizard.com/download
+    about: Get the app and read setup instructions.
+  - name: Private support
+    url: https://shrinkwizard.com/contact
+    about: Get help with account, billing, or other private matters.
+  - name: Report a security concern
+    url: https://github.com/ecc521/Shrink-Wizard/security/policy
+    about: Please report security concerns privately by email.
